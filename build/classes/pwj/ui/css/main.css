@@ -1,0 +1,170 @@
+* {
+    -fx-bg-upper : #373334;
+    -fx-bg-bottom : #EAEAEA;
+    -fx-inactive-txt : #989898;
+    -fx-active-txt : #FAF0E6;
+}
+
+.root 
+{
+    -fx-background-color: -fx-bg-bottom;
+    -fx-padding : 0;
+}
+
+
+
+/****** Menu Bar Styling ******/
+.menu-bar 
+{
+    -fx-background-color: -fx-bg-upper;
+    -fx-base : -fx-bg-upper;
+    -fx-padding : 2 0 0 0;
+}
+.menu 
+{
+    -fx-cursor: HAND;
+}
+.menu-bar > .container > .menu-button {
+    -fx-background-color: -fx-bg-upper;
+}
+.menu-bar > .container > .menu-button > .label    /* Style for menu text, i.e : outils, a propos... */
+{
+    -fx-text-fill: -fx-inactive-txt;
+    -fx-font-size: 13px;
+}
+.menu-bar > .container > .menu-button:hover > .label,
+.menu-bar > .container > .menu-button:focused > .label,
+.menu-bar > .container > .menu-button:showing > .label 
+{
+    -fx-background-color: -fx-bg-upper;
+    -fx-text-fill: -fx-active-txt;
+}
+.menu-item  /* The buttons in the dtopdown menu */
+{
+    -fx-cursor: HAND;
+    -fx-text-fill: -fx-inactive-txt;
+}
+.menu-item .label 
+{
+    -fx-text-fill: -fx-inactive-txt;
+}
+.menu-item:focused, .menu-item:hovered 
+{
+    -fx-background-color: #292929; 
+}
+.menu-item:focused .label, .menu-item:hovered .label
+{
+    -fx-text-fill: #FAF0E6;
+}
+.context-menu 
+{
+    -fx-background-color: -fx-bg-upper;
+}
+
+
+
+
+
+/****** Minimize & Close Buttons *******/
+.control-btns-conainer
+{
+    -fx-background-color: -fx-bg-upper;
+}
+.control-btns
+{
+    -fx-background-color: -fx-bg-upper;
+    -fx-text-fill: -fx-inactive-txt;
+}
+.control-btns:hover
+{
+    -fx-cursor : HAND;
+    -fx-text-fill: -fx-active-txt;
+}
+.control-btns:hover .glyph-icon
+{
+    -fx-fill: -fx-active-txt;
+}
+
+
+
+
+
+
+
+/***************** PIC Name Pane ***********/
+.name-card {
+    -fx-background-color: -fx-bg-upper;
+    -fx-border-color: #433940;
+    -fx-border-width: 0.5 0 0.5 0;
+}
+
+.name-card > .label {
+    -fx-text-fill: -fx-active-txt;
+}
+
+
+/***************** Tab Headers ***********/
+.tab {
+
+    -fx-pref-height: 35;
+    /* -fx-pref-width: 150; */
+} 
+.tab-header-background 
+{
+    -fx-background-color: -fx-bg-upper;
+}
+.headers-region
+{
+    -fx-cursor : HAND;
+}
+
+/***************** Controle Buttons ***********/
+.controle-buttons
+{
+    -fx-padding : 0;
+    -fx-border-color : -fx-bg-upper;
+    -fx-border-width : 0 0 0 0;
+}
+.controle-buttons:hover
+{
+    -fx-cursor : HAND;
+    -fx-border-width : 0 0 2 0;
+}
+
+
+
+/***************** Upload BTN **************/
+#upload-button
+{
+    -fx-background-color: -fx-bg-upper;
+    -fx-text-fill: -fx-inactive-txt;
+    -fx-padding : 0;
+}
+#upload-button:hover, #upload-button:hover .glyph-icon
+{
+    -fx-cursor : HAND;
+    -fx-fill: -fx-active-txt;
+}
+
+#hex-path
+{
+    -fx-background-color: #E4E4E4;
+    -fx-border-width: 0;
+}
+
+#drop-area
+{
+    -fx-background-color: #E6E6E6;
+    -fx-border-color : -fx-bg-upper;
+    -fx-border-width : 0.1 0.1 0 0.1;
+}
+#drop-area .text
+{
+    -fx-text-fill: #f00;
+}
+
+/***************** Footer Pane ***********/
+.footer-pane
+{
+    -fx-background-color: -fx-bg-bottom;
+}

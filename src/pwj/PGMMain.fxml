@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.JFXButton?>
+<?import com.jfoenix.controls.JFXTabPane?>
+<?import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.Cursor?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.effect.DropShadow?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+
+<StackPane fx:id="rootPane" prefHeight="403.0" prefWidth="680.0" stylesheets="@ui/css/main.css" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="pwj.PGMMainController">
+   <children>
+      <AnchorPane id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="420.0" prefWidth="680.0" stylesheets="@ui/css/main.css">
+         <children>
+            <MenuBar focusTraversable="false" layoutY="-1.0" prefHeight="30.0" prefWidth="680.0" stylesheets="@ui/css/main.css">
+              <menus>
+                <Menu mnemonicParsing="false" text="File">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Close" />
+                  </items>
+                </Menu>
+                <Menu mnemonicParsing="false" text="Edit">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="Delete" />
+                  </items>
+                </Menu>
+                <Menu mnemonicParsing="false" text="Help">
+                  <items>
+                    <MenuItem mnemonicParsing="false" text="About" />
+                  </items>
+                </Menu>
+              </menus>
+               <cursor>
+                  <Cursor fx:constant="DEFAULT" />
+               </cursor>
+               <effect>
+                  <DropShadow height="6.705" radius="1.17625" spread="0.48" width="0.0" />
+               </effect>
+            </MenuBar>
+            <Pane layoutY="29.0" prefHeight="50.0" prefWidth="680.0" styleClass="name-card" stylesheets="@ui/css/main.css">
+               <children>
+                  <Label fx:id="deviceStatus" layoutX="10.0" prefHeight="50.0" prefWidth="200.0" text="Aucun PIC Détecté">
+                     <font>
+                        <Font name="DejaVu Sans Mono" size="18.0" />
+                     </font>
+                  </Label>
+               </children>
+            </Pane>
+            <JFXTabPane focusTraversable="false" layoutY="79.0" prefHeight="316.0" prefWidth="680.0" stylesheets="@ui/css/main.css">
+               <tabs>
+                  <Tab text="Contrôles">
+                    <content>
+                      <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="278.0" prefWidth="680.0">
+                           <children>
+                              <VBox layoutX="350.0" layoutY="53.0" prefHeight="205.0" prefWidth="316.0">
+                                 <children>
+                                    <AnchorPane id="drop-area" fx:id="dropArea" onDragDropped="#handleFileDrop" onDragOver="#handleFileDrag" prefHeight="180.0" prefWidth="330.0" stylesheets="@ui/css/main.css">
+                                       <children>
+                                          <Text fill="#3632338f" layoutX="64.0" layoutY="73.0" smooth="false" strokeType="OUTSIDE" strokeWidth="0.0" text="Glisser et déposer le fichier ici " textAlignment="CENTER" wrappingWidth="199.99999105930328">
+                                             <font>
+                                                <Font name="DejaVu Sans Mono" size="16.0" />
+                                             </font>
+                                          </Text>
+                                       </children>
+                                    </AnchorPane>
+                                    <HBox prefHeight="25.0" prefWidth="330.0">
+                                       <children>
+                                          <Label id="hex-path" fx:id="hexPath" focusTraversable="false" prefHeight="25.0" prefWidth="275.0" stylesheets="@ui/css/main.css" textOverrun="LEADING_ELLIPSIS">
+                                             <font>
+                                                <Font size="10.0" />
+                                             </font>
+                                             <padding>
+                                                <Insets left="5.0" right="5.0" />
+                                             </padding>
+                                          </Label>
+                                          <JFXButton id="upload-button" alignment="CENTER" contentDisplay="GRAPHIC_ONLY" focusTraversable="false" onAction="#loadHex" prefHeight="30.0" prefWidth="95.0" ripplerFill="#eaeaea" stylesheets="@ui/css/main.css">
+                                             <graphic>
+                                                <FontAwesomeIconView fill="#989898" glyphName="UPLOAD" size="16" />
+                                             </graphic>
+                                             <tooltip>
+                                                <Tooltip contentDisplay="BOTTOM" text="Charger un fichier HEX" textAlignment="CENTER" />
+                                             </tooltip>
+                                          </JFXButton>
+                                       </children>
+                                       <effect>
+                                          <DropShadow blurType="ONE_PASS_BOX" color="#373334" height="4.5" radius="1.75" width="4.5" />
+                                       </effect>
+                                    </HBox>
+                                 </children>
+                              </VBox>
+                              <VBox layoutX="14.0" layoutY="56.0" prefHeight="200.0" prefWidth="322.0">
+                                 <children>
+                                    <HBox>
+                                       <children>
+                                          <Label focusTraversable="false" prefHeight="35.0" prefWidth="205.0" text="DeviceID " textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font name="System Bold" size="14.0" />
+                                             </font>
+                                          </Label>
+                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="158.0" text="N/A" textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font size="14.0" />
+                                             </font>
+                                          </Label>
+                                       </children>
+                                    </HBox>
+                                    <HBox layoutX="10.0" layoutY="10.0">
+                                       <children>
+                                          <Label focusTraversable="false" prefHeight="35.0" prefWidth="205.0" text="Famille    " textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font name="System Bold" size="14.0" />
+                                             </font>
+                                          </Label>
+                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="158.0" text="N/A" textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font size="14.0" />
+                                             </font>
+                                          </Label>
+                                       </children>
+                                    </HBox>
+                                    <HBox layoutX="10.0" layoutY="10.0">
+                                       <children>
+                                          <Label focusTraversable="false" prefHeight="35.0" prefWidth="205.0" text="Mémoire Programme" textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font name="System Bold" size="14.0" />
+                                             </font>
+                                          </Label>
+                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="158.0" text="N/A" textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font size="14.0" />
+                                             </font>
+                                          </Label>
+                                       </children>
+                                    </HBox>
+                                    <HBox layoutX="10.0" layoutY="40.0">
+                                       <children>
+                                          <Label focusTraversable="false" prefHeight="35.0" prefWidth="205.0" text="EEPROM" textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font name="System Bold" size="14.0" />
+                                             </font>
+                                          </Label>
+                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="158.0" text="N/A" textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font size="14.0" />
+                                             </font>
+                                          </Label>
+                                       </children>
+                                    </HBox>
+                                    <HBox layoutX="10.0" layoutY="70.0">
+                                       <children>
+                                          <Label focusTraversable="false" prefHeight="35.0" prefWidth="205.0" text="VDD" textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font name="System Bold" size="14.0" />
+                                             </font>
+                                          </Label>
+                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="158.0" text="N/A" textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font size="14.0" />
+                                             </font>
+                                          </Label>
+                                       </children>
+                                    </HBox>
+                                    <HBox layoutX="10.0" layoutY="100.0">
+                                       <children>
+                                          <Label focusTraversable="false" prefHeight="35.0" prefWidth="205.0" text="VPP" textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font name="System Bold" size="14.0" />
+                                             </font>
+                                          </Label>
+                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="158.0" text="N/A" textFill="#373334">
+                                             <padding>
+                                                <Insets left="10.0" />
+                                             </padding>
+                                             <font>
+                                                <Font size="14.0" />
+                                             </font>
+                                          </Label>
+                                       </children>
+                                    </HBox>
+                                 </children>
+                              </VBox>
+                              <HBox layoutX="346.0" layoutY="7.0" prefHeight="35.0" prefWidth="320.0">
+                                 <children>
+                                    <JFXButton focusTraversable="false" prefHeight="40.0" prefWidth="123.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Programmer">
+                                       <font>
+                                          <Font size="14.0" />
+                                       </font>
+                                    </JFXButton>
+                                    <JFXButton focusTraversable="false" layoutX="158.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Lire">
+                                       <font>
+                                          <Font size="14.0" />
+                                       </font>
+                                    </JFXButton>
+                                    <JFXButton focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Vérifier">
+                                       <font>
+                                          <Font size="14.0" />
+                                       </font>
+                                    </JFXButton>
+                                    <JFXButton focusTraversable="false" layoutX="84.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Effacer">
+                                       <font>
+                                          <Font size="14.0" />
+                                       </font>
+                                    </JFXButton>
+                                 </children>
+                              </HBox>
+                           </children>
+                        </AnchorPane>
+                    </content>
+                  </Tab>
+                  <Tab text="Mémoire Programme">
+                    <content>
+                      <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+                    </content>
+                  </Tab>
+                  <Tab text="EEPROM">
+                    <content>
+                      <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+                    </content>
+                  </Tab>
+               </tabs>
+            </JFXTabPane>
+            <Pane layoutY="396.0" opacity="0.99" prefHeight="20.0" prefWidth="680.0" styleClass="footer-pane" stylesheets="@ui/css/main.css">
+               <children>
+                  <Label fx:id="programmerStatus" focusTraversable="false" prefHeight="20.0" prefWidth="680.0" text="Programmateur Introuvable" textFill="#373334">
+                     <font>
+                        <Font name="System Bold" size="12.0" />
+                     </font>
+                     <padding>
+                        <Insets left="10.0" />
+                     </padding>
+                  </Label>
+               </children>
+               <effect>
+                  <DropShadow height="6.0" radius="6.25" />
+               </effect>
+            </Pane>
+         </children>
+      </AnchorPane>
+   </children>
+</StackPane>

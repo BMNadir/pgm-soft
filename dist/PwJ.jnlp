@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp spec="1.0" xmlns:jfx="http://javafx.com" href="PwJ.jnlp">
+  <information>
+    <title>PwJ</title>
+    <vendor>NaD!R</vendor>
+    <description>null</description>
+    <offline-allowed/>
+  </information>
+  <resources>
+    <j2se version="1.6+" href="http://java.sun.com/products/autodl/j2se"/>
+    <jar href="PwJ.jar" size="6538" download="eager" />
+    <jar href="lib\fontawesomefx-8.9.jar" size="571068" download="eager" />
+    <jar href="lib\hid4java-develop-SNAPSHOT-sources.jar" size="214208" download="eager" />
+    <jar href="lib\hid4java-develop-SNAPSHOT.jar" size="213241" download="eager" />
+    <jar href="lib\jfoenix-8.0.7.jar" size="2631271" download="eager" />
+    <jar href="lib\jna-4.5.2.jar" size="1484022" download="eager" />
+  </resources>
+  <applet-desc  width="800" height="600" main-class="com.javafx.main.NoJavaFXFallback"  name="PwJ" >
+    <param name="requiredFXVersion" value="8.0+"/>
+  </applet-desc>
+  <jfx:javafx-desc  width="800" height="600" main-class="pwj.PwJ"  name="PwJ" />
+  <update check="always"/>
+</jnlp>
