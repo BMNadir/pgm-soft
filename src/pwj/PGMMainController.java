@@ -13,9 +13,10 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import pwj.usb.USBFunctions;
 
 public class PGMMainController implements Initializable {
-    
+    private boolean programmerFound = false;
     private String hexLastPath = "";
     private File hexFile;
     
@@ -72,5 +73,22 @@ public class PGMMainController implements Initializable {
         hexLastPath = hexFile.getParent();     //Get directory of last loaded hex
         hexPath.setText(hexLastPath);
     }
+
+    @FXML
+    private void connectToProgrammer(ActionEvent event) {
+        byte[] version = USBFunctions.checkForProgrammer();
+        if (version!= null)
+        {
+            setProgrammerFound(true);
+            programmerStatus.setText("Programmateur Connecté, FW version : " + version[1] + "."+ version[2]+ "."+ version[3]);
+            //connecterAuProgrammateur.setDisable(true);
+        }
+        
+    }
+
+    public void setProgrammerFound(boolean programmerFound) {
+        this.programmerFound = programmerFound;
+    }
+    
     
 }

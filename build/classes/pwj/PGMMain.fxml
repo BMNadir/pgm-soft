@@ -20,15 +20,15 @@
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
 
-<StackPane fx:id="rootPane" prefHeight="403.0" prefWidth="680.0" stylesheets="@ui/css/main.css" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="pwj.PGMMainController">
+<StackPane fx:id="rootPane" prefHeight="416.0" prefWidth="680.0" stylesheets="@ui/css/main.css" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="pwj.PGMMainController">
    <children>
-      <AnchorPane id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="420.0" prefWidth="680.0" stylesheets="@ui/css/main.css">
+      <AnchorPane id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="416.0" prefWidth="680.0" stylesheets="@ui/css/main.css">
          <children>
             <MenuBar focusTraversable="false" layoutY="-1.0" prefHeight="30.0" prefWidth="680.0" stylesheets="@ui/css/main.css">
               <menus>
-                <Menu mnemonicParsing="false" text="File">
+                <Menu mnemonicParsing="false" text="Outils">
                   <items>
-                    <MenuItem mnemonicParsing="false" text="Close" />
+                    <MenuItem mnemonicParsing="false" onAction="#connectToProgrammer" text="Connecter au programmateur" />
                   </items>
                 </Menu>
                 <Menu mnemonicParsing="false" text="Edit">
@@ -68,7 +68,7 @@
                                  <children>
                                     <AnchorPane id="drop-area" fx:id="dropArea" onDragDropped="#handleFileDrop" onDragOver="#handleFileDrag" prefHeight="180.0" prefWidth="330.0" stylesheets="@ui/css/main.css">
                                        <children>
-                                          <Text fill="#3632338f" layoutX="64.0" layoutY="73.0" smooth="false" strokeType="OUTSIDE" strokeWidth="0.0" text="Glisser et déposer le fichier ici " textAlignment="CENTER" wrappingWidth="199.99999105930328">
+                                          <Text fill="#3632338f" layoutX="64.0" layoutY="73.0" smooth="false" strokeType="OUTSIDE" strokeWidth="0.0" text="Faire glisser un fichier HEX ici" textAlignment="CENTER" wrappingWidth="199.99999105930328">
                                              <font>
                                                 <Font name="DejaVu Sans Mono" size="16.0" />
                                              </font>
@@ -100,7 +100,7 @@
                                     </HBox>
                                  </children>
                               </VBox>
-                              <VBox layoutX="14.0" layoutY="56.0" prefHeight="200.0" prefWidth="322.0">
+                              <VBox layoutX="28.0" layoutY="53.0" prefHeight="200.0" prefWidth="322.0" style="-fx-background-color: ECECEC;">
                                  <children>
                                     <HBox>
                                        <children>
@@ -223,27 +223,30 @@
                                        </children>
                                     </HBox>
                                  </children>
+                                 <padding>
+                                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                 </padding>
                               </VBox>
-                              <HBox layoutX="346.0" layoutY="7.0" prefHeight="35.0" prefWidth="320.0">
+                              <HBox layoutX="364.0" layoutY="10.0" prefHeight="30.0" prefWidth="280.0" spacing="10.0">
                                  <children>
-                                    <JFXButton focusTraversable="false" prefHeight="40.0" prefWidth="123.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Programmer">
+                                    <JFXButton buttonType="RAISED" focusTraversable="false" prefHeight="40.0" prefWidth="123.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Programmer">
                                        <font>
-                                          <Font size="14.0" />
+                                          <Font name="System Bold" size="14.0" />
                                        </font>
                                     </JFXButton>
-                                    <JFXButton focusTraversable="false" layoutX="158.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Lire">
+                                    <JFXButton buttonType="RAISED" focusTraversable="false" layoutX="158.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Lire">
                                        <font>
-                                          <Font size="14.0" />
+                                          <Font name="System Bold" size="14.0" />
                                        </font>
                                     </JFXButton>
-                                    <JFXButton focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Vérifier">
+                                    <JFXButton buttonType="RAISED" focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Vérifier">
                                        <font>
-                                          <Font size="14.0" />
+                                          <Font name="System Bold" size="14.0" />
                                        </font>
                                     </JFXButton>
-                                    <JFXButton focusTraversable="false" layoutX="84.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Effacer">
+                                    <JFXButton buttonType="RAISED" focusTraversable="false" layoutX="84.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Effacer">
                                        <font>
-                                          <Font size="14.0" />
+                                          <Font name="System Bold" size="14.0" />
                                        </font>
                                     </JFXButton>
                                  </children>
