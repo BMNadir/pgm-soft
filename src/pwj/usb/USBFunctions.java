@@ -34,9 +34,9 @@ public class USBFunctions {
             {
                 programmer = hidDevice;
                 programmer.open();
-                byte[] instruction = new byte[2];
-                instruction[0] = 0x02;
-                instruction[1] = 0x01;
+                byte[] instruction = new byte[1];
+                //instruction[0] = 0x02;
+                instruction[0] = 0x01;
                 USBFunctions.hidWrite(instruction);
                 byte[] response = new byte[4];
                 while (programmer.read(response, 500) < 0);
@@ -49,11 +49,12 @@ public class USBFunctions {
     
     public static void hidWrite(byte[] cmd)
     {
-        byte[] toSend = new byte[cmd.length + 1];
+        byte[] toSend = new byte[cmd.length + 2]; //1 byte is used for the leading zero, the other is for data length
         toSend[0] = 0;
+        toSend[1] = (byte)(cmd.length + 1);
         for (byte i = 0; i < cmd.length ; i++)
         {
-            toSend[i+1] = cmd[i];
+            toSend[i+2] = cmd[i];
         }
         programmer.write(toSend, toSend.length, (byte) 0);
     }

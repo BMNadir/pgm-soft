@@ -7,6 +7,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.AnchorPane;
@@ -30,10 +31,15 @@ public class PGMMainController implements Initializable {
     private Label programmerStatus = new Label();
     @FXML
     private AnchorPane dropArea = new AnchorPane();
+    @FXML
+    private MenuItem connectMenuItem = new MenuItem();
+    @FXML
+    private MenuItem disconnectMenuItem = new MenuItem();
     
     
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+        connectMenuItem.fire();
     }    
 
     @FXML
@@ -80,14 +86,24 @@ public class PGMMainController implements Initializable {
         if (version!= null)
         {
             setProgrammerFound(true);
-            programmerStatus.setText("Programmateur Connecté, FW version : " + version[1] + "."+ version[2]+ "."+ version[3]);
-            //connecterAuProgrammateur.setDisable(true);
+            programmerStatus.setText("Programmateur connecté, FW Vr: " + version[1] + "."+ version[2]+ "."+ version[3]);
+            disconnectMenuItem.setDisable(false);
+            connectMenuItem.setDisable(true);
         }
         
     }
 
     public void setProgrammerFound(boolean programmerFound) {
         this.programmerFound = programmerFound;
+    }
+
+    @FXML
+    private void disconnectFromProgrammer(ActionEvent event) {
+        USBFunctions.usbTerminate();
+        connectMenuItem.setDisable(false);
+        disconnectMenuItem.setDisable(true);
+        programmerStatus.setText("Programmateur déconnecté");
+        PwJ.setUsbFound(false);
     }
     
     

@@ -28,7 +28,8 @@
               <menus>
                 <Menu mnemonicParsing="false" text="Outils">
                   <items>
-                    <MenuItem mnemonicParsing="false" onAction="#connectToProgrammer" text="Connecter au programmateur" />
+                    <MenuItem fx:id="connectMenuItem" mnemonicParsing="false" onAction="#connectToProgrammer" text="Connecter au programmateur" />
+                        <MenuItem fx:id="disconnectMenuItem" disable="true" mnemonicParsing="false" onAction="#disconnectFromProgrammer" text="Déconnecter du programmateur" />
                   </items>
                 </Menu>
                 <Menu mnemonicParsing="false" text="Edit">
@@ -269,7 +270,7 @@
             </JFXTabPane>
             <Pane layoutY="396.0" opacity="0.99" prefHeight="20.0" prefWidth="680.0" styleClass="footer-pane" stylesheets="@ui/css/main.css">
                <children>
-                  <Label fx:id="programmerStatus" focusTraversable="false" prefHeight="20.0" prefWidth="680.0" text="Programmateur Introuvable" textFill="#373334">
+                  <Label fx:id="programmerStatus" focusTraversable="false" prefHeight="20.0" prefWidth="680.0" text="Programmateur déconnecté" textFill="#373334">
                      <font>
                         <Font name="System Bold" size="12.0" />
                      </font>
