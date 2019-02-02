@@ -14,9 +14,10 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import pwj.inter.iCommands;
 import pwj.usb.USBFunctions;
 
-public class PGMMainController implements Initializable {
+public class PGMMainController implements Initializable, iCommands{
     private boolean programmerFound = false;
     private String hexLastPath = "";
     private File hexFile;
@@ -39,7 +40,7 @@ public class PGMMainController implements Initializable {
     
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        connectMenuItem.fire();
+        connectMenuItem.fire(); //Start connectToProgrammer routine
     }    
 
     @FXML
@@ -86,9 +87,22 @@ public class PGMMainController implements Initializable {
         if (version!= null)
         {
             setProgrammerFound(true);
-            programmerStatus.setText("Programmateur connecté, FW Vr: " + version[1] + "."+ version[2]+ "."+ version[3]);
+            programmerStatus.setText("Programmateur connecté, FW Vr: " + version[1] + ".0"+ version[2]+ ".0"+ version[3]);
             disconnectMenuItem.setDisable(false);
             connectMenuItem.setDisable(true);
+            
+            /***** FOR TESTING ONLY *****/
+            byte[] cmd = new byte [8];
+            cmd [0] = SET_VDD;
+            cmd [1] = 0b1100000;    //CCPL
+            cmd [2] = 0b1001001;    //CCPH
+            cmd [3] = (byte) (((5 * 0.7) / 7) * 255);    //VDDLim 
+            cmd [4] = RUN_ROM_SCRIPT;
+            cmd [5] = 1;    //script length
+            cmd [6] = 0x00;    //LSByte of scripts address
+            cmd [7] = 0x1E;    //MSByte of scripts address
+            USBFunctions.hidWrite(cmd);
+            /*****************************/
         }
         
     }
