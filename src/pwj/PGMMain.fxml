@@ -10,6 +10,8 @@
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.effect.DropShadow?>
 <?import javafx.scene.layout.AnchorPane?>
@@ -258,12 +260,42 @@
                   </Tab>
                   <Tab text="Mémoire Programme">
                     <content>
-                      <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+                      <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                           <children>
+                              <TableView fx:id="flashTable" focusTraversable="false" layoutX="55.0" prefHeight="281.0" prefWidth="570.0" stylesheets="@ui/css/prog-mem-dump.css">
+                                <columns>
+                                  <TableColumn fx:id="flashAddrCol" editable="false" prefWidth="90.0" resizable="false" sortable="false" />
+                                  <TableColumn fx:id="flashAddr0" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="flashAddr1" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="flashAddr2" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="flashAddr3" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="flashAddr4" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="flashAddr5" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="flashAddr6" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="flashAddr7" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                </columns>
+                              </TableView>
+                           </children></AnchorPane>
                     </content>
                   </Tab>
                   <Tab text="EEPROM">
                     <content>
-                      <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+                      <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
+                           <children>
+                              <TableView fx:id="eepromTable" focusTraversable="false" layoutX="55.0" prefHeight="281.0" prefWidth="570.0" stylesheets="@ui/css/prog-mem-dump.css">
+                                 <columns>
+                                    <TableColumn fx:id="eepromAddrCol" editable="false" prefWidth="90.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="eepromAddr0" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="eepromAddr1" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="eepromAddr2" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="eepromAddr3" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="eepromAddr4" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="eepromAddr5" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="eepromAddr6" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                    <TableColumn fx:id="eepromAddr7" editable="false" maxWidth="1.7976931348623157E308" prefWidth="60.0" resizable="false" sortable="false" />
+                                 </columns>
+                              </TableView>
+                           </children></AnchorPane>
                     </content>
                   </Tab>
                </tabs>
