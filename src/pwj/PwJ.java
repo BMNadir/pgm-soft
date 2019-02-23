@@ -16,6 +16,9 @@ public class PwJ extends Application {
         Scene scene = new Scene(root);
         stage.setScene(scene);
         stage.setTitle ("PwJ");
+        stage.sizeToScene();
+        stage.setResizable(false);
+        //stage.setResizable(false);
         stage.show();
     }
 

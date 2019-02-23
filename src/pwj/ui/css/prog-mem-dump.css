@@ -1,4 +1,10 @@
 
+.table-view
+{
+	-fx-border-radius : 0.5em;
+    -fx-background-radius : 0.5em;
+}
+
 .noheader .column-header-background
 {
 	-fx-background-color : #373334;

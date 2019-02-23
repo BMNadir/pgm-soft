@@ -3,7 +3,9 @@
     -fx-bg-bottom : #EAEAEA;
     -fx-inactive-txt : #989898;
     -fx-active-txt : #FAF0E6;
+    -fx-drop-area-color : #E6E6E6;
 }
+
 
 .root 
 {
@@ -62,10 +64,8 @@
 }
 
 
-
-
-
 /****** Minimize & Close Buttons *******/
+/*
 .control-btns-conainer
 {
     -fx-background-color: -fx-bg-upper;
@@ -84,12 +84,7 @@
 {
     -fx-fill: -fx-active-txt;
 }
-
-
-
-
-
-
+*/
 
 /***************** PIC Name Pane ***********/
 .name-card {
@@ -99,7 +94,10 @@
 }
 
 .name-card > .label {
-    -fx-text-fill: -fx-active-txt;
+    -fx-text-fill: -fx-bg-bottom;
+}
+.name-card > .label:hover {
+    -fx-text-fill: #FFF;
 }
 
 
@@ -118,19 +116,34 @@
     -fx-cursor : HAND;
 }
 
-/***************** Controle Buttons ***********/
+/***************** Controle Buttons  (PROGRAMMER, LIRE...)***********/
 .controle-buttons
 {
     -fx-padding : 0;
-    -fx-border-color : -fx-bg-upper;
+    -fx-background-color : -fx-bg-bottom;
+    -fx-text-fill : -fx-bg-upper;
+    -fx-border-color : #000;
     -fx-border-width : 0 0 0 0;
 }
 .controle-buttons:hover
 {
     -fx-cursor : HAND;
+    -fx-text-fill : #000;
     -fx-border-width : 0 0 2 0;
+    
 }
-
+/*
+#right-controle-buttons
+{
+	-fx-background-radius : 0 0.9em 0.9em 0;
+	-fx-border-radius : 0 0.9em 0.9em 0;
+}
+#left-controle-buttons
+{
+	-fx-background-radius : 0.7em 0 0 0.7em;
+	-fx-border-radius : 0.7em 0 0 0.7em;
+}
+*/
 
 
 /***************** Upload BTN **************/
@@ -154,14 +167,30 @@
 
 #drop-area
 {
-    -fx-background-color: #E6E6E6;
-    -fx-border-color : -fx-bg-upper;
-    -fx-border-width : 0.1 0.1 0 0.1;
+    -fx-background-color: -fx-drop-area-color;
+    -fx-border-color : #BEBEBE;
+    -fx-border-width : 0.4 0.4 0 0.4;
+    -fx-border-radius : 0.5em;
+    -fx-background-radius : 0.5em 0.5em 0 0;
 }
 #drop-area .text
 {
     -fx-text-fill: #f00;
 }
+
+/***************** Device Info ***********/
+.device-info-container
+{
+	-fx-border-width : 0.4;
+	-fx-border-color : #BBB;
+	-fx-border-radius : 0.5em;
+}
+.device-info-labels
+{
+	-fx-border-width : 0 0 0.1 0;
+	-fx-border-color : -fx-bg-upper;
+}
+
 
 /***************** Footer Pane ***********/
 .footer-pane

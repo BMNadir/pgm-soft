@@ -9,9 +9,9 @@ import org.hid4java.HidServices;
 import org.hid4java.HidServicesSpecification;
 import org.hid4java.ScanMode;
 import pwj.PwJ;
-import pwj.inter.iCommands;
+import pwj.inter.IDefinitions;
 
-public class USBFunctions implements iCommands {
+public class USBFunctions implements IDefinitions {
     
     private static HidServices hidServices ;
     public static HidDevice programmer;

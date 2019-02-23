@@ -3,6 +3,8 @@ package pwj;
 import java.io.File;
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -20,14 +22,17 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import pwj.inter.iCommands;
+import pwj.db.DbUtil;
+import pwj.functions.PwJFunctions;
 import pwj.usb.USBFunctions;
+import static pwj.usb.USBFunctions.programmer;
+import pwj.inter.IDefinitions;
 
-public class PGMMainController implements Initializable, iCommands{
+public class PGMMainController implements Initializable, IDefinitions{
     private boolean programmerFound = false;
     private String hexLastPath = "";
     private File hexFile;
-    ObservableList<MemoryDumpRow> flashList = FXCollections.observableArrayList ();
+    ObservableList<MemoryDumpRow> flashList  = FXCollections.observableArrayList ();
     ObservableList<MemoryDumpRow> eepromList = FXCollections.observableArrayList ();
     
     @FXML
@@ -84,6 +89,8 @@ public class PGMMainController implements Initializable, iCommands{
     private TableColumn<MemoryDumpRow, String> eepromAddr6;
     @FXML
     private TableColumn<MemoryDumpRow, String> eepromAddr7;
+    @FXML
+    private MenuItem detectPICMenuItem;
     
     public static class MemoryDumpRow 
     {
@@ -158,14 +165,15 @@ public class PGMMainController implements Initializable, iCommands{
     /**************************************************************************/
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        connectMenuItem.fire(); //Start connectToProgrammer routine
+        DbUtil.dbConnection();                                  // Connect to DB
+        connectMenuItem.fire();                                 // Start connectToProgrammer routine
         initFlashDump ();
-        MemoryDumpRow.addr = -8; 
+        MemoryDumpRow.addr = -8;                                // So that the first address will be equal to 0
         initEEPROMDump ();
-        flashAddrCol.getStyleClass().add("address-column"); //Change background color of address column in Flash memory dump
-        flashTable.getStyleClass().add("noheader"); //Remove column headers from Flash memory dump
-        eepromAddrCol.getStyleClass().add("address-column"); //Change background color of address column in EEPROM memory dump
-        eepromTable.getStyleClass().add("noheader"); //Remove column headers from EEPROM memory dump
+        flashAddrCol.getStyleClass().add("address-column");     // Change background color of address column in Flash memory dump
+        flashTable.getStyleClass().add("noheader");             // Remove column headers from Flash memory dump
+        eepromAddrCol.getStyleClass().add("address-column");    // Change background color of address column in EEPROM memory dump
+        eepromTable.getStyleClass().add("noheader");            // Remove column headers from EEPROM memory dump
     }    
 
     @FXML
@@ -177,21 +185,23 @@ public class PGMMainController implements Initializable, iCommands{
         fc.setTitle("Charger HEX");
         
         if (!hexLastPath.isEmpty())
-            fc.setInitialDirectory(new File(hexLastPath)); //Open FileChooser at last location
+            fc.setInitialDirectory(new File(hexLastPath)); // Open FileChooser at last location
         File file = fc.showOpenDialog(currentStage);
         if (file != null)
         {
-            hexLastPath = file.getParent();     //Get directory of last loaded hex
+            // Get directory of last loaded hex
+            hexLastPath = file.getParent();     
             hexPath.setText(hexLastPath);
         }
     }
 
     @FXML
     private void handleFileDrag(DragEvent event) {
-        if (event.getDragboard().hasFiles()) //Proceed if dragged object is a file
+        if (event.getDragboard().hasFiles()) // Proceed if dragged object is a file
         {
             hexFile = event.getDragboard().getFiles().get(0);
             String hexFileName = hexFile.getName();
+            // Accept only files with .HEX extension
             if (hexFileName.substring(hexFileName.lastIndexOf(".")).equals(".hex"))
             {
                 event.acceptTransferModes(TransferMode.ANY);
@@ -202,8 +212,8 @@ public class PGMMainController implements Initializable, iCommands{
 
     @FXML
     private void handleFileDrop(DragEvent event) {
-        hexLastPath = hexFile.getParent();     //Get directory of last loaded hex
-        hexPath.setText(hexLastPath);
+        hexLastPath = hexFile.getParent();      // Get directory of last loaded hex
+        hexPath.setText(hexLastPath);           // Display the path in the label
     }
 
     @FXML
@@ -212,21 +222,43 @@ public class PGMMainController implements Initializable, iCommands{
         if (version!= null)
         {
             setProgrammerFound(true);
-            programmerStatus.setText("Programmateur connecté, FW Vr: " + version[1] + ".0"+ version[2]+ ".0"+ version[3]);
+            programmerStatus.setText("Programmateur connecté, FW Vr: " + version[1] + ".0"+ version[2]+ "."+ version[3]);
             disconnectMenuItem.setDisable(false);
             connectMenuItem.setDisable(true);
             
+            pwjInit ();
+            
             /***** FOR TESTING ONLY *****/
-            byte[] cmd = new byte [8];
-            cmd [0] = SET_VDD;
-            cmd [1] = 0b1100000;    //CCPL
-            cmd [2] = 0b1001001;    //CCPH
-            cmd [3] = (byte) (((5 * 0.7) / 7) * 255);    //VDDLim 
+            /*
+            byte[] cmd = new byte [17];
+            cmd [0] = SET_VPP;
+            cmd [1] = 0x40;
+            cmd [2] = (byte) (12 * 18.61);
+            cmd [3] = (byte) (12 * 0.7 * 18.61);
+            
             cmd [4] = RUN_ROM_SCRIPT;
-            cmd [5] = 1;    //script length
-            cmd [6] = 0x00;    //LSByte of scripts address
-            cmd [7] = 0x1E;    //MSByte of scripts address
+            cmd [5] = 17;
+            cmd [6] = 0x3E;
+            cmd [7] = 0x61;
+            
+            cmd [8] = RUN_ROM_SCRIPT;
+            cmd [9] = 18;
+            cmd [10] = (byte) 0x8A;
+            cmd [11] = 0x61;
+            
+            cmd [12] = RUN_ROM_SCRIPT;
+            cmd [13] = 7;
+            cmd [14] = (byte) 0x3C;
+            cmd [15] = 0x60;
+            cmd [16] = UPLOAD;
             USBFunctions.hidWrite(cmd);
+            byte[] response = new byte[10];
+            while (programmer.read(response, 500) < 0);
+            
+            for (byte bt : response)
+               System.out.println(bt);
+            System.out.println();
+            /*
             /*****************************/
         }
         
@@ -282,5 +314,18 @@ public class PGMMainController implements Initializable, iCommands{
             eepromList.add(new MemoryDumpRow("FFFF", "FFFF", "FFFF", "FFFF", "FFFF", "FFFF", "FFFF", "FFFF"));
         }
         eepromTable.getItems().setAll(eepromList);
+    }
+    
+    // Initialize Programmer 
+    private static void pwjInit ()
+    {
+        // Make sure VDD is off
+        byte[] script = {VDD_OFF};
+        PwJFunctions.sendScript(script);
+        
+        // Initialize VDD to 3.3V
+        // PwJFunctions.setVdd(3.3F, 0.85f); 
+        PwJFunctions.checkForPoweredDevice ();
+        PwJFunctions.identifyDevice ();
     }
 }
