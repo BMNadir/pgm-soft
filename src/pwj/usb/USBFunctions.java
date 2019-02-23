@@ -30,7 +30,8 @@ public class USBFunctions implements IDefinitions {
     public static byte[] checkForProgrammer ()
     {
         // Provide a list of attached devices
-        for (HidDevice hidDevice : hidServices.getAttachedHidDevices()) {
+        for (HidDevice hidDevice : hidServices.getAttachedHidDevices()) 
+        {
             //Compare VID and PID of the detected device to those in the FW
             if(hidDevice.getProductId() == 0x0001 && hidDevice.getVendorId() == 0x0025)
             {

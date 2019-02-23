@@ -102,7 +102,8 @@
 
 
 /***************** Tab Headers ***********/
-.tab {
+.tab 
+{
 
     -fx-pref-height: 35;
     /* -fx-pref-width: 150; */
@@ -115,7 +116,11 @@
 {
     -fx-cursor : HAND;
 }
-
+.jfx-tab-pane .headers-region .tab-selected-line 
+{
+	-fx-pref-height: 3px !important;
+    -fx-background-color: #FFF;
+}
 /***************** Controle Buttons  (PROGRAMMER, LIRE...)***********/
 .controle-buttons
 {

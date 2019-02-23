@@ -27,6 +27,7 @@ import pwj.functions.PwJFunctions;
 import pwj.usb.USBFunctions;
 import static pwj.usb.USBFunctions.programmer;
 import pwj.inter.IDefinitions;
+import pwj.ui.Prompt;
 
 public class PGMMainController implements Initializable, IDefinitions{
     private boolean programmerFound = false;
@@ -37,6 +38,8 @@ public class PGMMainController implements Initializable, IDefinitions{
     
     @FXML
     private StackPane rootPane = new StackPane ();
+    @FXML
+    private AnchorPane rootAnchorPane= new AnchorPane();
     @FXML
     private Label deviceStatus = new Label();
     @FXML
@@ -90,7 +93,8 @@ public class PGMMainController implements Initializable, IDefinitions{
     @FXML
     private TableColumn<MemoryDumpRow, String> eepromAddr7;
     @FXML
-    private MenuItem detectPICMenuItem;
+    private MenuItem detectPICMenuItem = new MenuItem();
+    
     
     public static class MemoryDumpRow 
     {
@@ -327,5 +331,20 @@ public class PGMMainController implements Initializable, IDefinitions{
         // PwJFunctions.setVdd(3.3F, 0.85f); 
         PwJFunctions.checkForPoweredDevice ();
         PwJFunctions.identifyDevice ();
+    }
+    
+    @FXML
+    private void detectPIC(ActionEvent event) {
+        PwJFunctions.identifyDevice ();
+    }
+    
+    @FXML
+    private void writePIC(ActionEvent event) {
+        if (!programmerFound)
+        {
+            Prompt.alert("Programmateur non connecté", rootPane, rootAnchorPane);
+            return;
+            // Call deviceWrite in PwJFunctions
+        }
     }
 }

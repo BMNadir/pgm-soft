@@ -26,7 +26,7 @@
 
 <StackPane fx:id="rootPane" prefHeight="416.0" prefWidth="680.0" stylesheets="@ui/css/main.css" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="pwj.PGMMainController">
    <children>
-      <AnchorPane id="AnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="416.0" prefWidth="680.0" stylesheets="@ui/css/main.css">
+      <AnchorPane id="AnchorPane" fx:id="rootAnchorPane" maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="416.0" prefWidth="680.0" stylesheets="@ui/css/main.css">
          <children>
             <MenuBar focusTraversable="false" layoutY="-1.0" prefHeight="30.0" prefWidth="680.0" stylesheets="@ui/css/main.css">
               <menus>
@@ -34,7 +34,7 @@
                   <items>
                     <MenuItem fx:id="connectMenuItem" mnemonicParsing="false" onAction="#connectToProgrammer" text="Connecter au programmateur" />
                         <MenuItem fx:id="disconnectMenuItem" disable="true" mnemonicParsing="false" onAction="#disconnectFromProgrammer" text="Déconnecter du programmateur" />
-                        <MenuItem fx:id="detectPICMenuItem" disable="true" mnemonicParsing="false" onAction="#disconnectFromProgrammer" text="Détecter le PIC" />
+                        <MenuItem fx:id="detectPICMenuItem" disable="true" mnemonicParsing="false" onAction="#detectPIC" text="Détecter le PIC" />
                   </items>
                 </Menu>
                 <Menu mnemonicParsing="false" text="Edit">
@@ -241,7 +241,7 @@
                               </VBox>
                               <HBox alignment="CENTER" layoutX="33.0" layoutY="10.0" prefHeight="30.0" prefWidth="278.0" spacing="10.0">
                                  <children>
-                                    <JFXButton id="left-controle-buttons" focusTraversable="false" prefHeight="40.0" prefWidth="123.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Programmer">
+                                    <JFXButton id="left-controle-buttons" focusTraversable="false" onAction="#writePIC" prefHeight="40.0" prefWidth="123.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Programmer">
                                        <font>
                                           <Font name="System Bold" size="14.0" />
                                        </font>

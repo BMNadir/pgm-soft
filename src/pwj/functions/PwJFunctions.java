@@ -100,18 +100,21 @@ public class PwJFunctions implements IDefinitions {
             searchForDevice(i);
     }
     
-    private static void searchForDevice (byte id)
+    private static boolean searchForDevice (byte id)
     {
-        int progEntryScript = 0;
+        int progEntryScript = 0; // Used for the ProgEntry script address
+        int progExitScript = 0;  // Used for the ProgExit script address
+        int readDevIdScript = 0; // Used for the ReadDevID script address
+        int devIdMask = 0;       // Stores the deviceID mask
+        
         byte progEntryLen = 0;
-        int progExitScript = 0;
         byte progExitLen = 0;
-        int readDevIdScript = 0;
         byte readDevIdLen = 0;
+        
         float familyVpp = 0;
         
         // https://stackoverflow.com/a/7150290
-        String query = "SELECT SCRIPTS.SCRIPTADDRESS, SCRIPTS.SCRIPTLEN, SCRIPTS.SCRIPTTYPE, FAMILY.VPP"
+        String query = "SELECT SCRIPTS.SCRIPTADDRESS, SCRIPTS.SCRIPTLEN, SCRIPTS.SCRIPTTYPE, FAMILY.VPP, FAMILY.DEVIDMASK"
                 + " FROM FAMILY_SCRIPTS"
                 + " INNER JOIN FAMILY ON FAMILY.FAMILYID=FAMILY_SCRIPTS.FAMILYID"
                 + " INNER JOIN SCRIPTS ON FAMILY_SCRIPTS.SCRIPTADDRESS = SCRIPTS.SCRIPTADDRESS"
@@ -133,6 +136,7 @@ public class PwJFunctions implements IDefinitions {
                 {
                     progExitScript = resultSet.getInt("SCRIPTADDRESS");
                     progExitLen = resultSet.getByte("SCRIPTLEN");
+                    devIdMask = resultSet.getInt("DEVIDMASK");
                 }
                 else if (resultSet.getString("SCRIPTTYPE").equals("READ_DEV_ID"))
                 {
@@ -180,7 +184,30 @@ public class PwJFunctions implements IDefinitions {
         byte[] response = new byte[5];
         while (programmer.read(response, 500) < 0);
         
-        for (byte bt : response)
-            System.out.println(bt);
+        long devID =  response[4] * 0x1000000 + response[3] * 0x10000 + response[2] * 0x100 + response[1];
+        
+        // For midrange, deviceID should be shifted to the right by one
+        if (id == 11)   devID >>= 1;
+        devID &= devIdMask;
+        System.out.println(Long.toHexString(devID));
+        return true;
+    }
+    
+    public static boolean writeDevice ()
+    {
+        // See if programmer is still connected 
+        if (USBFunctions.checkForProgrammer() == null)
+        {
+            return false;
+        }
+        
+        checkForPoweredDevice ();
+        
+        if (!searchForDevice((byte)11))
+        {
+            return false;
+        }
+        
+        return true;
     }
 }

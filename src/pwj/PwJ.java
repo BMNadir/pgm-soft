@@ -9,16 +9,17 @@ import javafx.stage.Stage;
 import pwj.usb.USBFunctions;
 
 public class PwJ extends Application {
-    private static boolean usbFound = false; //Used so we don't terminate a non-existing USB connection
+    private static boolean usbFound = false; // Used so we don't terminate a non-existing USB connection
     @Override
     public void start(Stage stage) throws Exception {
         Parent root = FXMLLoader.load(getClass().getResource("PGMMain.fxml"));
         Scene scene = new Scene(root);
         stage.setScene(scene);
         stage.setTitle ("PwJ");
-        stage.sizeToScene();
+        stage.setMaxHeight(443);
+        stage.setMaxWidth(678);
+        //stage.sizeToScene();
         stage.setResizable(false);
-        //stage.setResizable(false);
         stage.show();
     }
 
