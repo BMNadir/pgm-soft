@@ -6,6 +6,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import pwj.PGMMainController;
 import pwj.db.DbUtil;
+import pwj.device.DeviceInfo;
 import pwj.usb.USBFunctions;
 import static pwj.usb.USBFunctions.programmer;
 import pwj.inter.IDefinitions;
@@ -15,7 +16,7 @@ public class PwJFunctions implements IDefinitions {
     private static float lastVdd = 3.3f; // For PIC24F, dsPIC33, PIC18F_J_ 
     private static float vpp;
     private static boolean selfPoweredDeviceFound = false;
-    private static ResultSet resultSet;
+    private static ResultSet rs;
     
     // Check if target device is self powered
     public static boolean checkForPoweredDevice ()
@@ -110,6 +111,8 @@ public class PwJFunctions implements IDefinitions {
     
     public static int searchForDevice (byte id)
     {
+        String familyName = "";
+        
         int progEntryScript = 0; // Used for the ProgEntry script address
         int progExitScript = 0;  // Used for the ProgExit script address
         int readDevIdScript = 0; // Used for the ReadDevID script address
@@ -122,32 +125,33 @@ public class PwJFunctions implements IDefinitions {
         float familyVpp = 0;
         
         // https://stackoverflow.com/a/7150290
-        String query = "SELECT SCRIPTS.SCRIPTADDRESS, SCRIPTS.SCRIPTLEN, SCRIPTS.SCRIPTTYPE, FAMILY.VPP, FAMILY.DEVIDMASK"
+        String query = "SELECT SCRIPTS.SCRIPTADDRESS, SCRIPTS.SCRIPTLEN, SCRIPTS.SCRIPTTYPE, FAMILY.FAMILYNAME, FAMILY.VPP, FAMILY.DEVIDMASK"
                 + " FROM FAMILY_SCRIPTS"
                 + " INNER JOIN FAMILY ON FAMILY.FAMILYID=FAMILY_SCRIPTS.FAMILYID"
                 + " INNER JOIN SCRIPTS ON FAMILY_SCRIPTS.SCRIPTADDRESS = SCRIPTS.SCRIPTADDRESS"
                 + " WHERE FAMILY.FAMILYID ="+id;
         
-        resultSet = DbUtil.execQuery(query);
+        rs = DbUtil.execQuery(query);
         try {
             // Should return VPP and all scripts used by a particular family
-            while (resultSet.next())
+            while (rs.next())
             {
-                familyVpp = resultSet.getFloat("VPP");
-                switch (resultSet.getString("SCRIPTTYPE")) 
+                familyVpp = rs.getFloat("VPP");
+                familyName = rs.getString("FAMILYNAME");
+                switch (rs.getString("SCRIPTTYPE")) 
                 {
                     case "PROG_ENTRY":
-                        progEntryScript = resultSet.getInt("SCRIPTADDRESS");
-                        progEntryLen = resultSet.getByte("SCRIPTLEN");
+                        progEntryScript = rs.getInt("SCRIPTADDRESS");
+                        progEntryLen = rs.getByte("SCRIPTLEN");
                         break;
                     case "PROG_EXIT":
-                        progExitScript = resultSet.getInt("SCRIPTADDRESS");
-                        progExitLen = resultSet.getByte("SCRIPTLEN");
-                        devIdMask = resultSet.getInt("DEVIDMASK");
+                        progExitScript = rs.getInt("SCRIPTADDRESS");
+                        progExitLen = rs.getByte("SCRIPTLEN");
+                        devIdMask = rs.getInt("DEVIDMASK");
                         break;
                     case "READ_DEV_ID":
-                        readDevIdScript = resultSet.getInt("SCRIPTADDRESS");
-                        readDevIdLen = resultSet.getByte("SCRIPTLEN");
+                        readDevIdScript = rs.getInt("SCRIPTADDRESS");
+                        readDevIdLen = rs.getByte("SCRIPTLEN");
                         break;
                     default:
                         return 0;
@@ -206,6 +210,7 @@ public class PwJFunctions implements IDefinitions {
         if (devID != PGMMainController.getActiveDevice())
         {
             PGMMainController.setActiveDevice ((int)devID);
+            getDeviceInfo((int)devID, familyName, progEntryScript, progExitScript, readDevIdScript, vpp);
         }
         return (int)devID;
     }
@@ -213,5 +218,59 @@ public class PwJFunctions implements IDefinitions {
     public static boolean writeDevice ()
     {
         return true;
+    }
+    
+    public static boolean getDeviceInfo (int deviceId, String familyName, int progEntry, int progExit, int readDevId, float vpp)
+    {
+        String query = "SELECT * FROM DEVICES WHERE DEVID="+deviceId;
+        rs = DbUtil.execQuery(query);
+        try {
+            // Should return only one row
+            if (!rs.first())
+                return false;
+            DeviceInfo deviceInfo = new DeviceInfo (
+                    familyName, 
+                    progEntry,
+                    progExit,
+                    readDevId, 
+                    vpp,
+                    rs.getString("DEVNAME"),
+                    rs.getInt("PROGMEMSIZE"),
+                    rs.getInt("EEMEMSIZE"),
+                    rs.getByte("CONFIGWORDS"),
+                    rs.getByte("USERIDWORDS"),
+                    rs.getInt("EEADDR"),
+                    rs.getInt("CONFIGADDR"),
+                    rs.getInt("USERIDADDR"),
+                    rs.getInt("BANDGAPMASK"),
+                    rs.getByte("CPMASK"),
+                    rs.getByte("CPCONFIG"),
+                    rs.getBoolean("OSCCALSAVE"),
+                    rs.getInt("IGNOREADDR"),
+                    rs.getFloat("VDDMIN"),
+                    rs.getFloat("VDDMAX"),
+                    rs.getFloat("VDDERASE"),
+                    rs.getByte("CALIBRATIONWORDS"),
+                    rs.getByte("PROGMEMADDRBYTES"),
+                    rs.getShort("PROGMEMRDWORDS"),
+                    rs.getShort("EERDLOCATIONS"),
+                    rs.getShort("PROGMEMWRWORDS"),
+                    rs.getByte("PROGMEMPANELBUFS"),
+                    rs.getInt("PROGMEMPANELOFFSET"),
+                    rs.getShort("EEWRLOCATIONS"),
+                    rs.getShort("DPMASK"),
+                    rs.getBoolean("WRITECFGONERASE"),
+                    rs.getBoolean("BLANKCHECKSKIPUSERIDS"),
+                    rs.getShort("IGNOREBYTES"),
+                    rs.getInt("BOOTFLASH"),
+                    rs.getShort("TESTMEMRDWORDS"),
+                    rs.getShort("EEROWERASEWORDS")
+            );
+            PGMMainController.setDevice(deviceInfo);
+            return true;
+        } catch (SQLException ex) {
+            Logger.getLogger(PwJFunctions.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
     }
 }

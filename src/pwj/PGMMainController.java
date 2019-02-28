@@ -192,7 +192,10 @@ public class PGMMainController implements Initializable, IDefinitions{
     public static int getActiveDevice() {
         return activeDevice;
     }
-    
+
+    public static void setDevice(DeviceInfo device) {
+        PGMMainController.device = device;
+    }
     
     @FXML
     private void loadHex(ActionEvent event) {
