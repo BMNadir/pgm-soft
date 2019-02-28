@@ -14,7 +14,7 @@ import pwj.inter.IDefinitions;
 public class USBFunctions implements IDefinitions {
     
     private static HidServices hidServices ;
-    public static HidDevice programmer;
+    public static HidDevice programmer = null;
     public static void usbInit ()
     {
         HidServicesSpecification hidServicesSpecification = new HidServicesSpecification();
@@ -29,19 +29,20 @@ public class USBFunctions implements IDefinitions {
     @SuppressWarnings("empty-statement")
     public static byte[] checkForProgrammer ()
     {
+        if (programmer != null) programmer.close();
         // Provide a list of attached devices
         for (HidDevice hidDevice : hidServices.getAttachedHidDevices()) 
         {
-            //Compare VID and PID of the detected device to those in the FW
+            // Compare VID and PID of the detected device to those in the FW
             if(hidDevice.getProductId() == 0x0001 && hidDevice.getVendorId() == 0x0025)
             {
                 programmer = hidDevice;
                 programmer.open();
-                byte[] instruction = new byte[1];
-                instruction[0] = GET_VERSION;
-                USBFunctions.hidWrite(instruction);
+                byte[] cmd = new byte[1];
+                cmd[0] = GET_VERSION;
+                USBFunctions.hidWrite(cmd);
                 byte[] response = new byte[4];
-                while (programmer.read(response, 500) < 0);
+                while (programmer.read(response, 3000) < 0);
                 PwJ.setUsbFound(true);
                 return response;
             }
@@ -51,7 +52,7 @@ public class USBFunctions implements IDefinitions {
     
     public static void hidWrite(byte[] cmd)
     {
-        byte[] toSend = new byte[cmd.length + 2]; //1 byte is used for the leading zero, the other is for data length
+        byte[] toSend = new byte[cmd.length + 2]; // 1 byte is used for the leading zero, the other is for data length
         toSend[0] = 0;
         toSend[1] = (byte)(cmd.length);
         for (byte i = 0; i < cmd.length ; i++)

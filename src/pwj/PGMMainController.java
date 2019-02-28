@@ -3,8 +3,6 @@ package pwj;
 import java.io.File;
 import java.net.URL;
 import java.util.ResourceBundle;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -23,14 +21,17 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import pwj.db.DbUtil;
+import pwj.device.DeviceInfo;
 import pwj.functions.PwJFunctions;
 import pwj.usb.USBFunctions;
-import static pwj.usb.USBFunctions.programmer;
 import pwj.inter.IDefinitions;
 import pwj.ui.Prompt;
 
 public class PGMMainController implements Initializable, IDefinitions{
     private boolean programmerFound = false;
+    private static byte activeFamily = 0;
+    private static int activeDevice = 0;
+    private static DeviceInfo device;
     private String hexLastPath = "";
     private File hexFile;
     ObservableList<MemoryDumpRow> flashList  = FXCollections.observableArrayList ();
@@ -180,6 +181,19 @@ public class PGMMainController implements Initializable, IDefinitions{
         eepromTable.getStyleClass().add("noheader");            // Remove column headers from EEPROM memory dump
     }    
 
+    public static void setActiveFamily(byte activeFamilyId) {
+        PGMMainController.activeFamily = activeFamilyId;
+    }
+
+    public static void setActiveDevice(int activeDevice) {
+        PGMMainController.activeDevice = activeDevice;
+    }
+
+    public static int getActiveDevice() {
+        return activeDevice;
+    }
+    
+    
     @FXML
     private void loadHex(ActionEvent event) {
         Stage currentStage = (Stage) rootPane.getScene().getWindow();
@@ -320,6 +334,28 @@ public class PGMMainController implements Initializable, IDefinitions{
         eepromTable.getItems().setAll(eepromList);
     }
     
+    private boolean interfaceCheck ()
+    {
+        // Return if programmer not present  
+        if (USBFunctions.checkForProgrammer() == null)
+        {
+            Prompt.alert("Programmateur non connecté", rootPane, rootAnchorPane);
+            
+            // Disconnect from the programmer if previously connected
+            if (programmerFound)
+                disconnectMenuItem.fire();      
+            return false;
+        }
+        // Return if no device has been found 
+        if (activeFamily == 0)
+        {
+            Prompt.alert("Aucun PIC n'a été détecté", rootPane, rootAnchorPane);
+            return false;
+        }
+        
+        return true;
+    }
+    
     // Initialize Programmer 
     private static void pwjInit ()
     {
@@ -339,12 +375,11 @@ public class PGMMainController implements Initializable, IDefinitions{
     }
     
     @FXML
-    private void writePIC(ActionEvent event) {
-        if (!programmerFound)
-        {
-            Prompt.alert("Programmateur non connecté", rootPane, rootAnchorPane);
-            return;
-            // Call deviceWrite in PwJFunctions
-        }
+    private void writePIC(ActionEvent event) 
+    {
+        if (!interfaceCheck())  return;
+        
+        // Call deviceWrite in PwJFunctions
     }
+    
 }

@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import pwj.PGMMainController;
 import pwj.db.DbUtil;
 import pwj.usb.USBFunctions;
 import static pwj.usb.USBFunctions.programmer;
@@ -33,6 +34,7 @@ public class PwJFunctions implements IDefinitions {
     }
     
     // Read and upload VDD and VPP voltages
+    @SuppressWarnings("empty-statement")
     public static boolean getVddVppVoltages ()
     {
         byte[] cmd = new byte[1];
@@ -40,7 +42,7 @@ public class PwJFunctions implements IDefinitions {
         
         USBFunctions.hidWrite(cmd);
         byte[] response = new byte[5];
-        while (programmer.read(response, 500) < 0);
+        while (programmer.read(response, 5000) < 0);
         // Check if received packet length is greater than zero
         if (response[0] > 0)
         {
@@ -97,10 +99,16 @@ public class PwJFunctions implements IDefinitions {
         }
         // Iterate over all families, last family has FamilyID = 11
         for (byte i = 11; i < 12; i++)
-            searchForDevice(i);
+        {
+            if (searchForDevice(i) != 0)
+            {
+                PGMMainController.setActiveFamily(i);
+                break; // No need to look for other families
+            }
+        }
     }
     
-    private static boolean searchForDevice (byte id)
+    public static int searchForDevice (byte id)
     {
         int progEntryScript = 0; // Used for the ProgEntry script address
         int progExitScript = 0;  // Used for the ProgExit script address
@@ -126,28 +134,33 @@ public class PwJFunctions implements IDefinitions {
             while (resultSet.next())
             {
                 familyVpp = resultSet.getFloat("VPP");
-                if (resultSet.getString("SCRIPTTYPE").equals("PROG_ENTRY"))
+                switch (resultSet.getString("SCRIPTTYPE")) 
                 {
-                    progEntryScript = resultSet.getInt("SCRIPTADDRESS");
-                    progEntryLen = resultSet.getByte("SCRIPTLEN");
+                    case "PROG_ENTRY":
+                        progEntryScript = resultSet.getInt("SCRIPTADDRESS");
+                        progEntryLen = resultSet.getByte("SCRIPTLEN");
+                        break;
+                    case "PROG_EXIT":
+                        progExitScript = resultSet.getInt("SCRIPTADDRESS");
+                        progExitLen = resultSet.getByte("SCRIPTLEN");
+                        devIdMask = resultSet.getInt("DEVIDMASK");
+                        break;
+                    case "READ_DEV_ID":
+                        readDevIdScript = resultSet.getInt("SCRIPTADDRESS");
+                        readDevIdLen = resultSet.getByte("SCRIPTLEN");
+                        break;
+                    default:
+                        return 0;
                 }
-                
-                else if (resultSet.getString("SCRIPTTYPE").equals("PROG_EXIT"))
-                {
-                    progExitScript = resultSet.getInt("SCRIPTADDRESS");
-                    progExitLen = resultSet.getByte("SCRIPTLEN");
-                    devIdMask = resultSet.getInt("DEVIDMASK");
-                }
-                else if (resultSet.getString("SCRIPTTYPE").equals("READ_DEV_ID"))
-                {
-                    readDevIdScript = resultSet.getInt("SCRIPTADDRESS");
-                    readDevIdLen = resultSet.getByte("SCRIPTLEN");
-                }
-                    
             }
         } catch (SQLException ex) {
             Logger.getLogger(PwJFunctions.class.getName()).log(Level.SEVERE, null, ex);
         }
+        
+        // Exit if one of the addresses wasn't found
+        if (progEntryScript == 0 || progExitScript == 0 || readDevIdScript == 0)
+            return 0;
+        
         byte[] cmd = new byte [26];
         cmd [0] = SET_VPP;
         cmd [1] = 0x40;
@@ -190,24 +203,15 @@ public class PwJFunctions implements IDefinitions {
         if (id == 11)   devID >>= 1;
         devID &= devIdMask;
         System.out.println(Long.toHexString(devID));
-        return true;
+        if (devID != PGMMainController.getActiveDevice())
+        {
+            PGMMainController.setActiveDevice ((int)devID);
+        }
+        return (int)devID;
     }
     
     public static boolean writeDevice ()
     {
-        // See if programmer is still connected 
-        if (USBFunctions.checkForProgrammer() == null)
-        {
-            return false;
-        }
-        
-        checkForPoweredDevice ();
-        
-        if (!searchForDevice((byte)11))
-        {
-            return false;
-        }
-        
         return true;
     }
 }
