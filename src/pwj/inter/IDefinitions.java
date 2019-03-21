@@ -14,6 +14,7 @@ public interface IDefinitions {
     static final byte CLEAR_UP_BUFF                 = 0x09;
     static final byte UPLOAD                        = 0x0A;
     static final byte RUN_USB_SCRIPT                = 0x0B;
+    static final byte RUN_ROM_SCRIIPT_ITR           = 0x0C;
     
     // Script commands
     static final byte READ_N_BITS                   = (byte)0xD5;
@@ -84,7 +85,6 @@ public interface IDefinitions {
     static final byte CONFIG_MEM_ERASE              = 0x1B;
     static final byte TEST_MEM_RD                   = 0x1C;
     static final byte EE_ROW_ERASE                  = 0x1D;
-    
     
     // Constants 
     static final float selfPoweredDeviceThreshold   = 2.3F;

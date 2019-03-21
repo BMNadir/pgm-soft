@@ -50,7 +50,7 @@ public class USBFunctions implements IDefinitions {
         return null;
     }
     
-    public static void hidWrite(byte[] cmd)
+    public static int hidWrite(byte[] cmd)
     {
         byte[] toSend = new byte[cmd.length + 2]; // 1 byte is used for the leading zero, the other is for data length
         toSend[0] = 0;
@@ -59,7 +59,7 @@ public class USBFunctions implements IDefinitions {
         {
             toSend[i+2] = cmd[i];
         }
-        programmer.write(toSend, toSend.length, (byte) 0);
+        return programmer.write(toSend, toSend.length, (byte) 0);
     }
     
     

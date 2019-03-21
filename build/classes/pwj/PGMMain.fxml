@@ -37,16 +37,6 @@
                         <MenuItem fx:id="detectPICMenuItem" disable="true" mnemonicParsing="false" onAction="#detectPIC" text="Détecter le PIC" />
                   </items>
                 </Menu>
-                <Menu mnemonicParsing="false" text="Edit">
-                  <items>
-                    <MenuItem mnemonicParsing="false" text="Delete" />
-                  </items>
-                </Menu>
-                <Menu mnemonicParsing="false" text="Help">
-                  <items>
-                    <MenuItem mnemonicParsing="false" text="About" />
-                  </items>
-                </Menu>
               </menus>
                <cursor>
                   <Cursor fx:constant="DEFAULT" />
@@ -57,7 +47,7 @@
             </MenuBar>
             <Pane layoutY="29.0" prefHeight="50.0" prefWidth="680.0" styleClass="name-card" stylesheets="@ui/css/main.css">
                <children>
-                  <Label fx:id="deviceStatus" layoutX="10.0" prefHeight="50.0" prefWidth="253.0" text="Aucun PIC Détecté">
+                  <Label fx:id="picNameCard" layoutX="10.0" prefHeight="50.0" prefWidth="253.0" text="Aucun PIC Détecté">
                      <font>
                         <Font name="System Bold" size="26.0" />
                      </font>
@@ -121,7 +111,7 @@
                                                 <Font name="System Bold" size="14.0" />
                                              </font>
                                           </Label>
-                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" styleClass="device-info-labels" text="N/A" textFill="#373334">
+                                          <Label fx:id="deviceIdLabel" focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" styleClass="device-info-labels" text="N/A" textFill="#373334">
                                              <padding>
                                                 <Insets left="10.0" />
                                              </padding>
@@ -141,7 +131,7 @@
                                                 <Font name="System Bold" size="14.0" />
                                              </font>
                                           </Label>
-                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" styleClass="device-info-labels" text="N/A" textFill="#373334">
+                                          <Label fx:id="familyLabel" focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" styleClass="device-info-labels" text="N/A" textFill="#373334">
                                              <padding>
                                                 <Insets left="10.0" />
                                              </padding>
@@ -161,7 +151,7 @@
                                                 <Font name="System Bold" size="14.0" />
                                              </font>
                                           </Label>
-                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" styleClass="device-info-labels" text="N/A" textFill="#373334">
+                                          <Label fx:id="romLabel" focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" styleClass="device-info-labels" text="N/A" textFill="#373334">
                                              <padding>
                                                 <Insets left="10.0" />
                                              </padding>
@@ -181,7 +171,7 @@
                                                 <Font name="System Bold" size="14.0" />
                                              </font>
                                           </Label>
-                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" styleClass="device-info-labels" text="N/A" textFill="#373334">
+                                          <Label fx:id="eepromLabel" focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" styleClass="device-info-labels" text="N/A" textFill="#373334">
                                              <padding>
                                                 <Insets left="10.0" />
                                              </padding>
@@ -201,7 +191,7 @@
                                                 <Font name="System Bold" size="14.0" />
                                              </font>
                                           </Label>
-                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" styleClass="device-info-labels" text="N/A" textFill="#373334">
+                                          <Label fx:id="vddLabel" focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" styleClass="device-info-labels" text="N/A" textFill="#373334">
                                              <padding>
                                                 <Insets left="10.0" />
                                              </padding>
@@ -221,7 +211,7 @@
                                                 <Font name="System Bold" size="14.0" />
                                              </font>
                                           </Label>
-                                          <Label focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" text="N/A" textFill="#373334">
+                                          <Label fx:id="vppLabel" focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="35.0" prefWidth="180.0" text="N/A" textFill="#373334">
                                              <padding>
                                                 <Insets left="10.0" />
                                              </padding>
@@ -256,7 +246,7 @@
                                           <Font name="System Bold" size="14.0" />
                                        </font>
                                     </JFXButton>
-                                    <JFXButton id="right-controle-buttons" focusTraversable="false" layoutX="84.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Effacer">
+                                    <JFXButton id="right-controle-buttons" focusTraversable="false" layoutX="84.0" layoutY="10.0" onAction="#erasePIC" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Effacer">
                                        <font>
                                           <Font name="System Bold" size="14.0" />
                                        </font>

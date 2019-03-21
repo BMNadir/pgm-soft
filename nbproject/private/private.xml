@@ -3,10 +3,11 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/N:/Should%20be%20on%20the%20desktop/_PFE/PGM%20Soft/PwJ/src/pwj/PwJ.java</file>
+            <file>file:/N:/Should%20be%20on%20the%20desktop/_PFE/PGM%20Soft/PwJ/src/pwj/device/DeviceInfo.java</file>
             <file>file:/N:/Should%20be%20on%20the%20desktop/_PFE/PGM%20Soft/PwJ/src/pwj/functions/PwJFunctions.java</file>
+            <file>file:/N:/Should%20be%20on%20the%20desktop/_PFE/PGM%20Soft/PwJ/src/pwj/inter/IDefinitions.java</file>
             <file>file:/N:/Should%20be%20on%20the%20desktop/_PFE/PGM%20Soft/PwJ/src/pwj/PGMMainController.java</file>
-            <file>file:/N:/Should%20be%20on%20the%20desktop/_PFE/PGM%20Soft/PwJ/src/pwj/device/PIC.java</file>
+            <file>file:/N:/Should%20be%20on%20the%20desktop/_PFE/PGM%20Soft/PwJ/src/pwj/usb/USBFunctions.java</file>
         </group>
     </open-files>
 </project-private>

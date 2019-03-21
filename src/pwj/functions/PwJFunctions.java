@@ -40,16 +40,17 @@ public class PwJFunctions implements IDefinitions {
     {
         byte[] cmd = new byte[1];
         cmd[0] = READ_VOLTAGES;
-        
         USBFunctions.hidWrite(cmd);
         byte[] response = new byte[5];
-        while (programmer.read(response, 5000) < 0);
+        
+        while (programmer.read(response, 3000) < 0);
         // Check if received packet length is greater than zero
         if (response[0] > 0)
         {
             // vddVppADC = CCPH:CCPL, Add 255 to both bytes to get the unsigned value
             float vddVppADC = (float)(((response[2] + 256)* 256.0f) + (response[1] + 256));
             vdd = (vddVppADC / 65536) * 5f;
+            
             vddVppADC = (float)((response[4] * 256.0f) + response[3]);
             vpp = (vddVppADC / 65536) * 13.7f;
             return true;
@@ -91,6 +92,237 @@ public class PwJFunctions implements IDefinitions {
         USBFunctions.hidWrite(script);
     }
     
+    public static void readOSSCAL(int address)
+    {
+        byte[] cmd =  new byte [11];
+        cmd[0] = RUN_USB_SCRIPT;
+        cmd[1] = 2;
+        cmd[2] = MCLR_TGT_GND_ON;
+        cmd[3] = VDD_ON;
+        cmd[4] = CLEAR_DOWN_BUFF;
+        cmd[5] = WRITE_DOWN_BUFF;
+        cmd[6] = 3;
+        cmd[7] = (byte) (address & 0xFF);
+        cmd[8] = (byte)(0xFF & (address >> 8));
+        cmd[9] = (byte)(0xFF & (address >> 16));
+        cmd[10] = 000;
+        USBFunctions.hidWrite(cmd);
+    }
+    
+    public static int findLastUsedInBuffer(int[] bufferToSearch, int blankValue, int startIndex)
+    {
+        for (int index = startIndex; index > 0; index--)
+        {
+            if (bufferToSearch[index] != blankValue)
+            {
+                return index;
+            }
+        }
+        return 0;          
+    }
+    
+    public static void rowErase(DeviceInfo device)
+    {
+        int memoryRows = device.getProgMemSize() / device.getRowEraseSize();
+        // Enter programming mode
+        
+        runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+
+        if (device.getProgMemWrPrepScript() > 0)
+        {
+            downloadAddress(0);
+            runScript(device.getProgMemWrScriptLen(), device.getProgMemWrPrepScript());;
+        }
+
+        byte[] rowEraseCmd = new byte[5];
+        rowEraseCmd[0] = RUN_ROM_SCRIIPT_ITR;
+        rowEraseCmd[1] = device.getRowEraseScriptLen();
+        rowEraseCmd[2] = (byte)device.getRowEraseScript();
+        rowEraseCmd[3] = (byte)(device.getRowEraseScript() >> 8);
+        do 
+        {
+            if (memoryRows >= 256)
+            {
+
+                rowEraseCmd[4] = 0;
+                memoryRows -= 256;
+            }
+            else 
+            {
+                rowEraseCmd[4] = (byte) (memoryRows & 0xFF);
+                memoryRows = 0;
+            }
+            USBFunctions.hidWrite(rowEraseCmd);
+        } while (memoryRows > 0);
+
+        runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+
+        // Erase config memory
+        if (device.getConfigMemEraseScript() > 0)
+        {
+            runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+
+            if (device.getProgMemWrPrepScript() > 0)
+            {
+                downloadAddress(device.getUserIdAddr());
+                runScript(device.getProgMemWrScriptLen(), device.getProgMemWrPrepScript());
+            }
+            runScript(device.getConfigMemEraseScriptLen(), device.getConfigMemEraseScript());
+            runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+        }
+    }
+    
+    public static void bulkErase(DeviceInfo device)
+    {
+        if (device.getConfigMemEraseScript() > 0 && device.getRowEraseScript() == 0)
+        {
+            runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+            
+            if (device.getConfigWrPrepScript() > 0)
+            {
+                downloadAddress(0);
+                runScript(device.getConfigWrPrepScriptLen(), device.getConfigWrPrepScript());
+            }
+            
+            runScript(device.getConfigWrScriptLen(), device.getConfigWrScript());
+            runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+        }
+        runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+        if (device.getChipErasePrepScript() > 0)
+        {
+            runScript(device.getChipErasePrepScriptLen(), device.getChipErasePrepScript());
+        }
+        
+        runScript(device.getChipEraseScriptLen(), device.getChipEraseScript());
+        runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+    }
+    
+    public static void progMemErase(DeviceInfo device)
+    {
+        runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+        runScript(device.getProgMemEraseScriptLen(), device.getProgMemEraseScript());
+        runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+    }
+    
+    public static void runScript (byte scriptLen, int scriptAddress)
+    {
+        byte[] runScriptCmd = new byte[4];
+        runScriptCmd[0] = RUN_ROM_SCRIPT;
+        runScriptCmd[1] = scriptLen;
+        runScriptCmd[2] = (byte) scriptAddress;
+        runScriptCmd[3] = (byte) (scriptAddress >> 8);
+        USBFunctions.hidWrite(runScriptCmd);
+    }
+    
+    public static int clearAndDownload (byte[] data, int startIndex)
+    {
+        if (startIndex >= data.length)
+        {
+            return 0;
+        }
+        int length = data.length - startIndex;
+        if (length > 60)
+        {
+            length = 60;
+        }
+        byte[] cmd = new byte[3 + length];
+        cmd[0] = CLEAR_DOWN_BUFF;
+        cmd[1] = WRITE_DOWN_BUFF;
+        cmd[2] = (byte)length;
+        for (int i = 0; i < length; i++)
+        {
+            cmd[3 + i] = (byte)data[startIndex + i];
+        }
+        if (USBFunctions.hidWrite(cmd) > 0)
+        {
+            return (startIndex + length);
+        }
+        return 0;
+    }
+    
+    public static int downloadData(byte[] data, int startIndex, int endIndex)
+    {
+        
+            if (startIndex >= endIndex)
+            {
+                return 0;
+            }
+            int length = endIndex - startIndex;
+            if (length > 61)
+            {
+                length = 61;
+            }
+            byte[] commandArray = new byte[2 + length];
+            commandArray[0] = WRITE_DOWN_BUFF;
+            commandArray[1] = (byte) length;
+            for (int i = 0; i < length; i++)
+            {
+                commandArray[2 + i] = data[startIndex + i];
+            }
+            if (USBFunctions.hidWrite(commandArray) > 0)
+            {
+                return (startIndex + length);
+            }
+            return 0;
+    }
+    
+    public static void writeConfigOutsideProgMem(DeviceInfo device, boolean codeProtect, boolean dataProtect)
+    {
+        int configWords = device.getConfigWords();
+        byte[] configBuffer = new byte[configWords * 2];
+        int[] configMemBuffer = device.getConfig();
+        int[] configMasks = device.getConfigMasks();
+        if (device.getBandGapMask() > 0)
+        {
+            configMemBuffer[0] &= ~device.getBandGapMask();
+            configMemBuffer[0] |= device.getBandGap();
+        }
+        runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+        if (device.getConfigWrPrepScript() > 0)
+        {
+            downloadAddress(0);
+            runScript(device.getConfigWrPrepScriptLen(), device.getConfigWrPrepScript());
+        }
+        for (int i = 0, j = 0; i < configWords; i++)
+        {
+            int configWord = (configMemBuffer[i] & configMasks[i]);
+            if (i == device.getCpConfig() - 1)
+            {
+                if (codeProtect)
+                {
+                    configWord &= ~device.getCpMask();
+                }
+                if (dataProtect)
+                {
+                    configWord &= ~device.getDpMask();
+                }
+            }
+            if (device.getFamilyName().equals("Midrange/Standard"))
+            {
+                configWord |= (~configMasks[i] & ~device.getBandGapMask());
+                configWord &= device.getBlankValue();
+                configWord <<= 1;
+            }
+            configBuffer [j++] = (byte)configWord;
+            configBuffer [j++] = (byte) (configWord >> 8);
+        }
+        clearAndDownload(configBuffer, 0);
+        runScript(device.getConfigWrScriptLen(), device.getConfigWrScript());
+        runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+    }
+    
+    public static void downloadAddress (int address)
+    {
+        byte[] downloadCmd = new byte[9];
+        downloadCmd[0] = CLEAR_DOWN_BUFF;
+        downloadCmd[1] = WRITE_DOWN_BUFF;  // download 
+        downloadCmd[2] = 3; 
+        downloadCmd[3] = (byte) address;
+        downloadCmd[4] = (byte) (address >> 8);
+        downloadCmd[5] = (byte) (address >> 16);
+        USBFunctions.hidWrite(downloadCmd);
+    }
+    
     public static void identifyDevice()
     {
         if (!selfPoweredDeviceFound)
@@ -109,6 +341,7 @@ public class PwJFunctions implements IDefinitions {
         }
     }
     
+    @SuppressWarnings("empty-statement")
     public static int searchForDevice (byte id)
     {
         String familyName = "";
@@ -117,6 +350,15 @@ public class PwJFunctions implements IDefinitions {
         int progExitScript = 0;  // Used for the ProgExit script address
         int readDevIdScript = 0; // Used for the ReadDevID script address
         int devIdMask = 0;       // Stores the deviceID mask
+        int blankValue = 0;
+        byte progMemHexBytes = 0;
+        byte eeMemHexBytes = 0;
+        byte userIdHexBytes = 0;
+        byte bytesPerLocation = 0;
+        byte eeMemBytesPerWord = 0;
+        byte eeMemAddressIncrement = 0;  
+        byte userIdBytes = 0;
+        byte addressIncrement = 0;
         
         byte progEntryLen = 0;
         byte progExitLen = 0;
@@ -125,7 +367,7 @@ public class PwJFunctions implements IDefinitions {
         float familyVpp = 0;
         
         // https://stackoverflow.com/a/7150290
-        String query = "SELECT SCRIPTS.SCRIPTADDRESS, SCRIPTS.SCRIPTLEN, SCRIPTS.SCRIPTTYPE, FAMILY.FAMILYNAME, FAMILY.VPP, FAMILY.DEVIDMASK"
+        String query = "SELECT *"
                 + " FROM FAMILY_SCRIPTS"
                 + " INNER JOIN FAMILY ON FAMILY.FAMILYID=FAMILY_SCRIPTS.FAMILYID"
                 + " INNER JOIN SCRIPTS ON FAMILY_SCRIPTS.SCRIPTADDRESS = SCRIPTS.SCRIPTADDRESS"
@@ -138,38 +380,45 @@ public class PwJFunctions implements IDefinitions {
             {
                 familyVpp = rs.getFloat("VPP");
                 familyName = rs.getString("FAMILYNAME");
-                switch (rs.getString("SCRIPTTYPE")) 
+                devIdMask = rs.getInt("DEVIDMASK");
+                blankValue = rs.getInt("BLANKVALUES");
+                progMemHexBytes = rs.getByte("PROGMEMHEXBYTES");
+                eeMemHexBytes = rs.getByte("EEHEXBYTES");
+                userIdHexBytes = rs.getByte("USERIDHEXBYTES");
+                bytesPerLocation = rs.getByte("BYTESPERLOCATION");
+                eeMemBytesPerWord = rs.getByte("EEMEMBYTESPERWORD");
+                eeMemAddressIncrement = rs.getByte("EEMEMADDRINCREMENT");
+                addressIncrement = rs.getByte("ADDRINCREMENT");
+                userIdBytes = rs.getByte("USERIDBYTES");
+                if (rs.getString("SCRIPTTYPE").equals("PROG_ENTRY"))
                 {
-                    case "PROG_ENTRY":
-                        progEntryScript = rs.getInt("SCRIPTADDRESS");
-                        progEntryLen = rs.getByte("SCRIPTLEN");
-                        break;
-                    case "PROG_EXIT":
-                        progExitScript = rs.getInt("SCRIPTADDRESS");
-                        progExitLen = rs.getByte("SCRIPTLEN");
-                        devIdMask = rs.getInt("DEVIDMASK");
-                        break;
-                    case "READ_DEV_ID":
-                        readDevIdScript = rs.getInt("SCRIPTADDRESS");
-                        readDevIdLen = rs.getByte("SCRIPTLEN");
-                        break;
-                    default:
-                        return 0;
+                    progEntryScript = rs.getInt("SCRIPTADDRESS");
+                    progEntryLen = rs.getByte("SCRIPTLEN");
+                }
+                
+                else if (rs.getString("SCRIPTTYPE").equals("PROG_EXIT"))
+                {
+                    progExitScript = rs.getInt("SCRIPTADDRESS");
+                    progExitLen = rs.getByte("SCRIPTLEN");
+                }
+                else if (rs.getString("SCRIPTTYPE").equals("READ_DEV_ID"))
+                {
+                    readDevIdScript = rs.getInt("SCRIPTADDRESS");
+                    readDevIdLen = rs.getByte("SCRIPTLEN");
                 }
             }
         } catch (SQLException ex) {
             Logger.getLogger(PwJFunctions.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
         // Exit if one of the addresses wasn't found
         if (progEntryScript == 0 || progExitScript == 0 || readDevIdScript == 0)
             return 0;
-        
         byte[] cmd = new byte [26];
         cmd [0] = SET_VPP;
         cmd [1] = 0x40;
         cmd [2] = (byte) (familyVpp * 18.61);
         cmd [3] = (byte) (familyVpp * 0.7 * 18.61);
+        
         cmd [4] = RUN_USB_SCRIPT;
         cmd [5] = 3;
         cmd [6] = MCLR_TGT_GND_ON;
@@ -180,10 +429,12 @@ public class PwJFunctions implements IDefinitions {
         cmd [10] = progEntryLen;
         cmd [11] = (byte) progEntryScript;
         cmd [12] = (byte)(progEntryScript >> 8);
+        
         cmd [13] = RUN_ROM_SCRIPT;
         cmd [14] = readDevIdLen;
         cmd [15] = (byte) readDevIdScript;
         cmd [16] = (byte)(readDevIdScript >> 8);
+        
         cmd [17] = RUN_ROM_SCRIPT;
         cmd [18] = progExitLen;
         cmd [19] = (byte) progExitScript;
@@ -206,24 +457,39 @@ public class PwJFunctions implements IDefinitions {
         // For midrange, deviceID should be shifted to the right by one
         if (id == 11)   devID >>= 1;
         devID &= devIdMask;
-        System.out.println(Long.toHexString(devID));
+        
+        // If deviceID is less then the smallest DEVID, exit
+        if (devID < 3616) return 0;
+        
+        PGMMainController.setDeviceFound(true);
         if (devID != PGMMainController.getActiveDevice())
         {
             PGMMainController.setActiveDevice ((int)devID);
-            getDeviceInfo((int)devID, familyName, progEntryScript, progExitScript, readDevIdScript, vpp);
+            getDeviceInfo((int)devID, familyName, progEntryScript, progEntryLen, progExitScript, progExitLen, readDevIdScript, readDevIdLen, familyVpp, blankValue, progMemHexBytes, eeMemHexBytes, userIdHexBytes, bytesPerLocation, eeMemBytesPerWord, eeMemAddressIncrement, userIdBytes, addressIncrement);
         }
         return (int)devID;
     }
     
-    public static boolean writeDevice ()
+    public static boolean getDeviceInfo (int deviceId, String familyName, int progEntry, byte progEntryLen, int progExit, byte progExitLen, int readDevId, byte readDevIdLen, float vpp, int blankValue, byte progMemHexBytes, byte eeMemHexBytes, byte userIdHexBytes, byte bytesPerLocation, byte eeMemBytesPerWord, byte eeMemAddressIncrement, byte userIdBytes, byte addressIncrement)
     {
-        return true;
-    }
-    
-    public static boolean getDeviceInfo (int deviceId, String familyName, int progEntry, int progExit, int readDevId, float vpp)
-    {
-        String query = "SELECT * FROM DEVICES WHERE DEVID="+deviceId;
-        rs = DbUtil.execQuery(query);
+        // Get device config first 
+        int[] configMasks = new int[8];
+        int[] configBlanks = new int[8];
+        byte configIndex = 0;
+        String configQuery = "SELECT * FROM DEVICE_CONFIG WHERE DEVID="+deviceId;
+        rs = DbUtil.execQuery(configQuery);
+        try 
+        {
+            while (rs.next())
+            {
+                configMasks[configIndex] = rs.getInt("CONFIGMASK");
+                configBlanks[configIndex++] = rs.getInt("CONFIGBLANK");
+            }
+        } catch (SQLException e) {}
+        // Get device info
+        String deviceQuery = "SELECT * FROM DEVICES WHERE DEVID="+deviceId;
+        rs = DbUtil.execQuery(deviceQuery);
+        
         try {
             // Should return only one row
             if (!rs.first())
@@ -231,9 +497,23 @@ public class PwJFunctions implements IDefinitions {
             DeviceInfo deviceInfo = new DeviceInfo (
                     familyName, 
                     progEntry,
+                    progEntryLen,
                     progExit,
+                    progExitLen,
                     readDevId, 
+                    readDevIdLen,
                     vpp,
+                    blankValue,
+                    configMasks,
+                    configBlanks,
+                    progMemHexBytes,
+                    eeMemHexBytes,
+                    userIdHexBytes,
+                    bytesPerLocation,
+                    eeMemBytesPerWord,
+                    eeMemAddressIncrement,
+                    userIdBytes,
+                    addressIncrement,
                     rs.getString("DEVNAME"),
                     rs.getInt("PROGMEMSIZE"),
                     rs.getInt("EEMEMSIZE"),
@@ -243,7 +523,7 @@ public class PwJFunctions implements IDefinitions {
                     rs.getInt("CONFIGADDR"),
                     rs.getInt("USERIDADDR"),
                     rs.getInt("BANDGAPMASK"),
-                    rs.getByte("CPMASK"),
+                    rs.getShort("CPMASK"),
                     rs.getByte("CPCONFIG"),
                     rs.getBoolean("OSCCALSAVE"),
                     rs.getInt("IGNOREADDR"),
@@ -264,8 +544,143 @@ public class PwJFunctions implements IDefinitions {
                     rs.getShort("IGNOREBYTES"),
                     rs.getInt("BOOTFLASH"),
                     rs.getShort("TESTMEMRDWORDS"),
-                    rs.getShort("EEROWERASEWORDS")
+                    rs.getShort("EEROWERASEWORDS"),
+                    rs.getShort("ROWERASESIZE")
             );
+             
+            String deviceScriptsQuery = "SELECT SCRIPTS.SCRIPTADDRESS, SCRIPTS.SCRIPTLEN, SCRIPTS.SCRIPTTYPE FROM DEVICE_SCRIPTS"
+                    + " INNER JOIN SCRIPTS ON DEVICE_SCRIPTS.SCRIPTADDRESS=SCRIPTS.SCRIPTADDRESS"
+                    + " WHERE DEVICE_SCRIPTS.DEVID="+deviceId;
+            rs = DbUtil.execQuery(deviceScriptsQuery);
+            try 
+            {
+                while (rs.next())
+                {
+                    switch (rs.getString("SCRIPTTYPE"))
+                    {
+                        case "CHIP_ERASE":
+                            deviceInfo.setChipEraseScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setChipEraseScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                        
+                        case "PROG_MEM_ADDR_SET":
+                            deviceInfo.setProgMemAddrSetScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setProgMemAddrSetScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "PROG_MEM_READ":
+                            deviceInfo.setProgMemRdScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setProgMemRdScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "EE_RD_PREP":
+                            deviceInfo.setEeRdPrepScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setEeRdPrepScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "EE_RD":
+                            deviceInfo.setEeRdScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setEeRdScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "USER_ID_RD_PREP":
+                            deviceInfo.setUserIdRdPrepScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setUserIdRdPrepScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "USER_ID_RD":
+                            deviceInfo.setUserIdRdScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setUserIdRdScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "CONFIG_RD_PREP":
+                            deviceInfo.setConfigRdPrepScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setConfigRdPrepScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "CONFIG_RD":
+                            deviceInfo.setConfigRdScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setConfigRdScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "PROG_MEM_WR_PREP":
+                            deviceInfo.setProgMemWrPrepScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setProgMemWrPrepScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "PROG_MEM_WR":
+                            deviceInfo.setProgMemWrScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setProgMemWrScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "EE_MEM_WR_PREP":
+                            deviceInfo.setEeWrPrepScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setEeWrPrepScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "EE_MEM_WR":
+                            deviceInfo.setEeWrScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setEeWrScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "USER_ID_WR_PREP":
+                            deviceInfo.setUserIdWrPrepScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setUserIdWrPrepScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "USER_ID_WR":
+                            deviceInfo.setUserIdWrScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setUserIdWrScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "CONFIG_WR_PREP":
+                            deviceInfo.setConfigWrPrepScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setConfigWrPrepScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "CONFIG_WR":
+                            deviceInfo.setConfigWrScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setConfigWrScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "OSCCAL_RD":
+                            deviceInfo.setOsscalRdScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setOsscalRdScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "OSCCAL_WR":
+                            deviceInfo.setOsscalWrScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setOsscalWrScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "CHIP_ERASE_PREP":
+                            deviceInfo.setChipErasePrepScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setChipErasePrepScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "PROG_MEM_ERASE":
+                            deviceInfo.setProgMemEraseScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setProgMemEraseScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "EE_MEM_ERASE":
+                            deviceInfo.setEeMemEraseScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setEeMemEraseScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                            
+                        case "CONFIG_MEM_ERASE":
+                            deviceInfo.setConfigMemEraseScript(rs.getInt("SCRIPTADDRESS"));
+                            deviceInfo.setConfigMemEraseScriptLen(rs.getByte("SCRIPTLEN"));
+                            break;
+                    }
+                }
+            } 
+            catch (SQLException e)
+            {
+                Logger.getLogger(PwJFunctions.class.getName()).log(Level.SEVERE, null, e);
+                return false;
+            }
+            
             PGMMainController.setDevice(deviceInfo);
             return true;
         } catch (SQLException ex) {
@@ -273,4 +688,6 @@ public class PwJFunctions implements IDefinitions {
             return false;
         }
     }
+    
+    
 }
