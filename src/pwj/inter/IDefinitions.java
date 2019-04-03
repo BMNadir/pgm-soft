@@ -15,6 +15,7 @@ public interface IDefinitions {
     static final byte UPLOAD                        = 0x0A;
     static final byte RUN_USB_SCRIPT                = 0x0B;
     static final byte RUN_ROM_SCRIIPT_ITR           = 0x0C;
+    static final byte UPLOAD_WITHOUT_LENGTH         = 0x0d;
     
     // Script commands
     static final byte READ_N_BITS                   = (byte)0xD5;
@@ -88,7 +89,7 @@ public interface IDefinitions {
     
     // Constants 
     static final float selfPoweredDeviceThreshold   = 2.3F;
-    //static enum targetDevicePower {powered, notPowered, notResponding;}
+    static enum writeState {FAILED, SUCCEED};
 }
 
 

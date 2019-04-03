@@ -92,6 +92,7 @@ public class PwJFunctions implements IDefinitions {
         USBFunctions.hidWrite(script);
     }
     
+    // NOT FULLY IMPLEMENTED 
     public static void readOSSCAL(int address)
     {
         byte[] cmd =  new byte [11];
@@ -214,6 +215,18 @@ public class PwJFunctions implements IDefinitions {
         USBFunctions.hidWrite(runScriptCmd);
     }
     
+    public static void runScriptItr (byte scriptLen, int scriptAddress, byte iterations)
+    {
+        byte[] runScriptItr = new byte[6];
+        runScriptItr[0] = CLEAR_UP_BUFF;
+        runScriptItr[1] = RUN_ROM_SCRIIPT_ITR;
+        runScriptItr[2] = scriptLen;
+        runScriptItr[3] = (byte) scriptAddress;
+        runScriptItr[4] = (byte) (scriptAddress >> 8);
+        runScriptItr[5] = iterations;
+        USBFunctions.hidWrite(runScriptItr);
+    }
+    
     public static int clearAndDownload (byte[] data, int startIndex)
     {
         if (startIndex >= data.length)
@@ -264,6 +277,27 @@ public class PwJFunctions implements IDefinitions {
                 return (startIndex + length);
             }
             return 0;
+    }
+    
+    @SuppressWarnings("empty-statement")
+    public static byte[] uploadData(boolean includeLength)
+    {
+        byte[] cmd = new byte[1];
+        if (includeLength)
+        {
+            cmd[0] = UPLOAD;    // First byte = length of data
+        }
+        else 
+        {
+            cmd[0] = UPLOAD_WITHOUT_LENGTH;
+        }
+        if (USBFunctions.hidWrite(cmd) > 0)
+        {
+            byte[] response = new byte[64];
+            while (programmer.read(response, 500) < 0);
+            return response;
+        }
+        return null;
     }
     
     public static void writeConfigOutsideProgMem(DeviceInfo device, boolean codeProtect, boolean dataProtect)

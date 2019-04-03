@@ -42,7 +42,7 @@ public class USBFunctions implements IDefinitions {
                 cmd[0] = GET_VERSION;
                 USBFunctions.hidWrite(cmd);
                 byte[] response = new byte[4];
-                while (programmer.read(response, 3000) < 0);
+                while (programmer.read(response, 500) < 0);
                 PwJ.setUsbFound(true);
                 return response;
             }

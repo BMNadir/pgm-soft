@@ -1,19 +1,26 @@
 package pwj;
 
+import com.jfoenix.controls.JFXButton;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
+import javafx.concurrent.WorkerStateEvent;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.Tab;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -28,9 +35,7 @@ import pwj.device.DeviceInfo;
 import pwj.functions.PwJFunctions;
 import pwj.usb.USBFunctions;
 import pwj.inter.IDefinitions;
-import static pwj.inter.IDefinitions.WRITE_DOWN_BUFF;
 import pwj.ui.Prompt;
-import static pwj.usb.USBFunctions.programmer;
 
 public class PGMMainController implements Initializable, IDefinitions {
     
@@ -117,6 +122,22 @@ public class PGMMainController implements Initializable, IDefinitions {
     private Label vddLabel = new Label();
     @FXML
     private Label vppLabel = new Label();
+    @FXML
+    private Tab controlsTab = new Tab();
+    @FXML
+    private JFXButton writeBtn = new JFXButton();
+    @FXML
+    private JFXButton readBtn = new JFXButton();
+    @FXML
+    private JFXButton verifyBtn = new JFXButton();
+    @FXML
+    private JFXButton eraseBtn = new JFXButton();
+    @FXML
+    private Tab progMemTab = new Tab();
+    @FXML
+    private Tab eepromTab = new Tab();
+
+    
     
     public static class MemoryDumpRow 
     {
@@ -134,7 +155,7 @@ public class PGMMainController implements Initializable, IDefinitions {
         public MemoryDumpRow(String addr0, String addr1, String addr2, String addr3, String addr4, String addr5, String addr6, String addr7) 
         {
             addr += 8;
-            this.addrCol = new SimpleStringProperty (Integer.toHexString(addr));
+            this.addrCol = new SimpleStringProperty (String.format("%1$06X",addr));
             this.addr0 = new SimpleStringProperty (addr0);
             this.addr1 = new SimpleStringProperty (addr1);
             this.addr2 = new SimpleStringProperty (addr2);
@@ -188,7 +209,9 @@ public class PGMMainController implements Initializable, IDefinitions {
     /**                             METHODS                                  **/
     /**************************************************************************/
     /**************************************************************************/
-    /**************************************************************************/
+    /**
+     * @param url*
+     * @param rb***********************************************************************/
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         DbUtil.dbConnection();                                  // Connect to DB
@@ -239,8 +262,6 @@ public class PGMMainController implements Initializable, IDefinitions {
             lastModified = hexFile.lastModified();
             hexLastPath = hexFile.getParent();     
             hexPath.setText(hexLastPath);
-            if (deviceFound)
-                importHex();
         }
     }
     
@@ -456,12 +477,16 @@ public class PGMMainController implements Initializable, IDefinitions {
             
             if (fileExceedsFlash)
             {
-                Prompt.alert("Le fichier hex contient des adresses invalides pour le "+device.getName(), rootPane, rootAnchorPane);
+                Platform.runLater(() -> {
+                    Prompt.alert("Le fichier hex contient des adresses invalides pour le "+device.getName(), rootPane, rootAnchorPane);
+                });
                 return false;
             }
         } catch (IOException e) 
         {
-            Prompt.alert("Fichier hex n'a pas pu être chargé", rootPane, rootAnchorPane);
+            Platform.runLater(() -> {
+                Prompt.alert("Fichier hex n'a pas pu être chargé", rootPane, rootAnchorPane);
+            });
             return false;
         }
         return true;
@@ -500,7 +525,7 @@ public class PGMMainController implements Initializable, IDefinitions {
             disconnectMenuItem.setDisable(false);
             connectMenuItem.setDisable(true);
             detectPICMenuItem.setDisable(false);
-            //pwjInit ();
+            pwjInit ();
         }
         
     }
@@ -518,6 +543,7 @@ public class PGMMainController implements Initializable, IDefinitions {
         setProgrammerFound(false);
         programmerStatus.setText("Programmateur déconnecté");
         PwJ.setUsbFound(false);
+        resetUI();
     }
     
     private void updateUI() {
@@ -528,6 +554,31 @@ public class PGMMainController implements Initializable, IDefinitions {
         vppLabel.setText(Float.toString(device.getVpp()));
         romLabel.setText(Integer.toString (device.getProgMemSize() / 1024) + " KB");
         eepromLabel.setText(Integer.toString (device.getEeMemSize()) + " B");
+    }
+    
+    private void resetUI() {
+        picNameCard.setText("Aucun PIC Détecté");
+        deviceIdLabel.setText("N/A");
+        familyLabel.setText("N/A");
+        vddLabel.setText("N/A");
+        vppLabel.setText("N/A");
+        romLabel.setText("N/A");
+        eepromLabel.setText("N/A");
+    }
+    
+    private void disableUI (boolean disable)
+    {
+        controlsTab.setDisable(disable);
+        progMemTab.setDisable(disable);
+        eepromTab.setDisable(disable);
+        writeBtn.setDisable(disable);
+        readBtn.setDisable(disable);
+        verifyBtn.setDisable(disable);
+        eraseBtn.setDisable(disable);
+        detectPICMenuItem.setDisable(disable);
+        connectMenuItem.setDisable(disable);
+        disconnectMenuItem.setDisable(disable);
+        
     }
     
     private void initFlashDump () 
@@ -568,22 +619,72 @@ public class PGMMainController implements Initializable, IDefinitions {
         eepromTable.getItems().setAll(eepromList);
     }
     
+    private void updateMemoryUI ()
+    {
+        String word1, word2, word3, word4, word5, word6, word7, word8;
+        int[] progMemBuffer = device.getProgMem();
+        flashList.clear();
+        flashTable.getItems().clear();
+        MemoryDumpRow.addr = -8;
+        int flashIndex = 0;
+        do 
+        {
+            word1 = String.format("%1$04X",progMemBuffer[flashIndex++]);
+            word2 = String.format("%1$04X",progMemBuffer[flashIndex++]);
+            word3 = String.format("%1$04X",progMemBuffer[flashIndex++]);
+            word4 = String.format("%1$04X",progMemBuffer[flashIndex++]);
+            word5 = String.format("%1$04X",progMemBuffer[flashIndex++]);
+            word6 = String.format("%1$04X",progMemBuffer[flashIndex++]);
+            word7 = String.format("%1$04X",progMemBuffer[flashIndex++]);
+            word8 = String.format("%1$04X",progMemBuffer[flashIndex++]);
+            flashList.add(new MemoryDumpRow(word1, word2, word3, word4, word5, word6, word7, word8));
+        } while (flashIndex < progMemBuffer.length);
+        flashTable.getItems().setAll(flashList);
+        
+        if (device.getEeMemSize() > 0)
+        {
+            int[] eeMemBuffer = device.getEepromMem();
+            eepromList.clear();
+            eepromTable.getItems().clear();
+            MemoryDumpRow.addr = -8;
+            int eeIndex = 0;
+            do 
+            {
+                word1 = String.format("%1$04X",eeMemBuffer[eeIndex++]);
+                word2 = String.format("%1$04X",eeMemBuffer[eeIndex++]);
+                word3 = String.format("%1$04X",eeMemBuffer[eeIndex++]);
+                word4 = String.format("%1$04X",eeMemBuffer[eeIndex++]);
+                word5 = String.format("%1$04X",eeMemBuffer[eeIndex++]);
+                word6 = String.format("%1$04X",eeMemBuffer[eeIndex++]);
+                word7 = String.format("%1$04X",eeMemBuffer[eeIndex++]);
+                word8 = String.format("%1$04X",eeMemBuffer[eeIndex++]);
+                eepromList.add(new MemoryDumpRow(word1, word2, word3, word4, word5, word6, word7, word8));
+            } while (eeIndex < eeMemBuffer.length);
+            eepromTable.getItems().setAll(eepromList);
+        }
+    }
+    
     private boolean interfaceCheck ()
     {
         // Return if programmer not present  
         if (USBFunctions.checkForProgrammer() == null)
         {
-            Prompt.alert("Programmateur non connecté", rootPane, rootAnchorPane);
-            
-            // Disconnect from the programmer if previously connected
-            if (programmerFound)
-                disconnectMenuItem.fire();      
+            Platform.runLater(() -> {
+                Prompt.alert("Programmateur non connecté", rootPane, rootAnchorPane);
+                // Disconnect from the programmer if previously connected
+                if (programmerFound)
+                    disconnectMenuItem.fire();
+            });
+                 
             return false;
         }
         // Return if no device has been found 
         if (activeFamily == 0)
         {
-            Prompt.alert("Aucun PIC n'a été détecté", rootPane, rootAnchorPane);
+            Platform.runLater(() -> {
+                Prompt.alert("Aucun PIC n'a été détecté", rootPane, rootAnchorPane);
+            });
+            
             return false;
         }
         
@@ -594,7 +695,9 @@ public class PGMMainController implements Initializable, IDefinitions {
     {
         if (hexFile == null)    
         {
-            Prompt.alert("Vous devez importer un fichier hex", rootPane, rootAnchorPane);
+            Platform.runLater(() -> {
+                Prompt.alert("Vous devez importer un fichier hex", rootPane, rootAnchorPane);
+            });
             return false;
         }
         /*
@@ -636,317 +739,317 @@ public class PGMMainController implements Initializable, IDefinitions {
     
     @FXML
     private void writePIC(ActionEvent event) 
-    {
-        boolean rowErase = false;
-        
-        // Check if programmer and device are connected
-        if (!interfaceCheck())  return;
-        
-        if (!hexFileCheck()) return;
-        
-        byte[] script = {MCLR_TGT_GND_ON, VDD_ON};
-        PwJFunctions.sendScript(script);
-        
-        // Check if device used low voltage row erase
-        if (device.getRowEraseSize() > 0)
-            rowErase = true;
-        
-        if (!eraseDevice(rowErase)) return;
-        
-        // Write device
-        
-        boolean configInProgramSpace = false;
-        int configLocation = device.getConfigAddr() / device.getProgMemHexBytes();
-        int configWords = device.getConfigWords();
-        int[] configBackUps = new int[configWords];
-        int[] progMemBuffer = device.getProgMem();
-        int[] eeMemBuffer = device.getEepromMem();
-        int[] configBuffer = device.getConfig();
-        int[] userIdBuffer = device.getUserID();
-        int endOfBuffer = progMemBuffer.length;
-        
-        
-        if (configLocation < device.getProgMemSize() && configWords > 0)
+    {   
+        Prompt.wait("Programmation en cours ...", rootPane, rootAnchorPane);
+        Task<writeState> write = new Task<writeState>()
         {
-            configInProgramSpace = true;
-            for (int config = configWords; config > 0; config--)
-            {
-                configBackUps[config - 1] = progMemBuffer[endOfBuffer - config];
-                progMemBuffer[endOfBuffer - config] = device.getBlankValue();
-            }
-        }
-        endOfBuffer--;
-        
-        // Write program memory
-        PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript()); // Enter programming mode
-        if (device.getProgMemWrPrepScript()!= 0)
-        {
-            PwJFunctions.downloadAddress(0);
-            PwJFunctions.runScript(device.getProgMemWrPrepScriptLen(), device.getProgMemWrPrepScript());
-        }
-        
-        // How many words are written in a single write operation 
-        int wordsPerWrite = device.getProgMemWrWords(); 
-        // How many bytes in a word
-        int bytesPerWord = device.getBytesPerLocation();
-        // How many executions of PROG_MEM_WR to use the download buffer
-        int scriptRunsToUseDownload = 256 / (bytesPerWord * wordsPerWrite); // 256 is the download buffer size
-        // Number of words to be written in each iteration of the FOR loop
-        int wordsPerLoop = scriptRunsToUseDownload * wordsPerWrite;
-        // Counter of number of words that have been downloaded
-        int wordsWritten = 0;
-        // Index of the last non blank value in program memory
-        endOfBuffer = PwJFunctions.findLastUsedInBuffer(progMemBuffer, device.getBlankValue(), endOfBuffer);
-        
-        
-        if (((wordsPerWrite == (endOfBuffer + 1)) || (wordsPerLoop > (endOfBuffer + 1))))
-        { 
-            scriptRunsToUseDownload = 1;
-            wordsPerLoop = wordsPerWrite;
-        }
-        // Loop iterations to download entire program memory buffer
-        int writes = (endOfBuffer + 1) / wordsPerLoop;
-        if (((endOfBuffer + 1) % wordsPerLoop) > 0)  writes++;
-        // Number of words to be written 
-        endOfBuffer = writes * wordsPerLoop;
-        
-        
-        byte[] downloadBuffer = new byte[256];
-        do
-        {
-            int downloadIndex = 0;
-            for (int word = 0; word < wordsPerLoop; word++)
-            {
-                if (wordsWritten == endOfBuffer)
+            @Override
+            protected writeState call() throws Exception {
+                boolean rowErase = false;
+                // Check if programmer and device are connected
+                if (!interfaceCheck())  return writeState.FAILED;
+                
+                if (!hexFileCheck()) return writeState.FAILED;
+
+                byte[] script = {MCLR_TGT_GND_ON, VDD_ON};
+                PwJFunctions.sendScript(script);
+
+                // Check if device uses row erase
+                if (device.getRowEraseSize() > 0)
+                    rowErase = true;
+
+                if (!eraseDevice(rowErase)) return writeState.FAILED;
+
+                // Write device
+                //Platform.runLater(() -> Prompt.wait("Programmation en cours ...", rootPane, rootAnchorPane));
+                boolean configInProgramSpace = false;
+                int configLocation = device.getConfigAddr() / device.getProgMemHexBytes();
+                int configWords = device.getConfigWords();
+                int[] configBackUps = new int[configWords];
+                int[] progMemBuffer = device.getProgMem();
+                int[] eeMemBuffer = device.getEepromMem();
+                int[] configBuffer = device.getConfig();
+                int[] userIdBuffer = device.getUserID();
+                int endOfBuffer = progMemBuffer.length;
+
+
+                if (configLocation < device.getProgMemSize() && configWords > 0)
                 {
-                    break;
-                }                   
-                int memWord = progMemBuffer[wordsWritten++];
-                if (activeFamily == 11)
-                {
-                    memWord = memWord << 1;
-                }
-                downloadBuffer[downloadIndex++] = (byte) memWord;  // Copy the first byte of prog mem to downloadBuffer
-  
-                for (int bt = 1; bt < bytesPerWord; bt++)   // Copy the rest of the bytes
-                {
-                    memWord >>= 8;
-                    downloadBuffer[downloadIndex++] = (byte) memWord;
-                }
-            }
-            // Download the data
-            int dataIndex = PwJFunctions.clearAndDownload(downloadBuffer, 0);
-            
-            while (dataIndex < downloadIndex)
-            {
-                dataIndex = PwJFunctions.downloadData(downloadBuffer, dataIndex, downloadIndex);
-            }
-            byte[] progMemWrCmd = new byte[6];
-            progMemWrCmd[0] = CLEAR_UP_BUFF;
-            progMemWrCmd[1] = RUN_ROM_SCRIIPT_ITR;
-            progMemWrCmd[2] = device.getProgMemWrScriptLen();
-            progMemWrCmd[3] = (byte) device.getProgMemWrScript();   
-            progMemWrCmd[4] = (byte) (device.getProgMemWrScript() >> 8); 
-            progMemWrCmd[5] = (byte) scriptRunsToUseDownload;
-            USBFunctions.hidWrite(progMemWrCmd);
-        } while (wordsWritten < endOfBuffer);
-        
-        PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
-        
-        int verifyStop = endOfBuffer;
-        if (configInProgramSpace)
-        {// if config in program memory, restore prog memory to proper values.
-            for (int cfg = configWords; cfg > 0; cfg--)
-            {
-                progMemBuffer[device.getProgMem().length - cfg] = configBackUps[cfg - 1];
-            }
-        }
-        
-        // EEPROM
-        if (device.getEeMemSize() > 0)
-        {
-            PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
-            if (device.getEeWrPrepScript() > 0)
-            {
-                PwJFunctions.downloadAddress(0);
-                PwJFunctions.runScript(device.getEeWrPrepScriptLen(), device.getEeWrPrepScript());
-            }
-            int eeBytesPerWord = device.getEeMemBytesPerWord();
-            int eeBlank = 0xFF;
-            if (device.getEeMemAddressIncrement() > 0)
-            {
-                eeBlank = 0xFFFF;
-            }
-            else if (activeFamily == 10)
-            {
-                eeBlank = 0xFFF;
-            }
-            int locationsPerLoop = device.getEeWrLocations(); 
-            if (locationsPerLoop < 16)
-            {
-                locationsPerLoop = 16;
-            }
-            if (!rowErase)
-            {
-                endOfBuffer = PwJFunctions.findLastUsedInBuffer(eeMemBuffer, eeBlank, eeMemBuffer.length - 1);
-            }
-            
-            int eeWrites = (endOfBuffer + 1) / locationsPerLoop;
-            if (((endOfBuffer + 1) % locationsPerLoop) > 0)
-            {
-                eeWrites++;
-            }
-            endOfBuffer = eeWrites * locationsPerLoop; 
-            byte[] eeDownloadBuffer = new byte[(locationsPerLoop * eeBytesPerWord)];
-            
-            
-            int eeScriptRunsPerLoop = locationsPerLoop / device.getEeWrLocations();
-            int locationsWritten = 0;
-            
-            do
-            {
-                int downloadIndex = 0;
-                for (int word = 0; word < locationsPerLoop; word++)
-                {
-                    int eeWord = eeMemBuffer[locationsWritten++];
-                    if (activeFamily == 11)
+                    configInProgramSpace = true;
+                    for (int config = configWords; config > 0; config--)
                     {
-                        eeWord = eeWord << 1;
-                    }
-
-                    eeDownloadBuffer[downloadIndex++] = (byte)(eeWord & 0xFF);
-
-                    for (int bt = 1; bt < bytesPerWord; bt++)
-                    {
-                        eeWord >>= 8;
-                        eeDownloadBuffer[downloadIndex++] = (byte)(eeWord & 0xFF);
-                    }  
-                }
-                PwJFunctions.clearAndDownload(eeDownloadBuffer, 0);
-                byte[] eeMemWrCmd = new byte[5];
-                eeMemWrCmd[0] = RUN_ROM_SCRIIPT_ITR;
-                eeMemWrCmd[1] = device.getEeWrScriptLen();
-                eeMemWrCmd[2] = (byte) device.getEeWrScript();
-                eeMemWrCmd[3] = (byte) (device.getEeWrScript() >> 8);
-                eeMemWrCmd[4] = (byte) eeScriptRunsPerLoop;
-                USBFunctions.hidWrite(eeMemWrCmd);
-            } while (locationsWritten < endOfBuffer);
-            PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
-        }
-        
-        // UserIDs
-        if (device.getUserIDs() > 0)
-        {
-            PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
-            if (device.getUserIdWrPrepScript() > 0)
-            {
-                PwJFunctions.runScript(device.getUserIdWrPrepScriptLen(), device.getUserIdWrPrepScript());
-            }
-            int bytesPerID = device.getUserIdBytes();
-            byte[] uIdDownloadBuffer = new byte[device.getUserIDs() * bytesPerID];
-            int downloadIndex = 0;
-            int idWritten = 0; 
-            for (int word = 0; word < device.getUserIDs(); word++)
-            {
-                int memWord = userIdBuffer[idWritten++];
-                if (activeFamily == 11)
-                {
-                    memWord = memWord << 1;
-                }
-
-                uIdDownloadBuffer[downloadIndex++] = (byte)(memWord & 0xFF);
-
-                for (int bt = 1; bt < bytesPerID; bt++)
-                {
-                    memWord >>= 8;
-                    uIdDownloadBuffer[downloadIndex++] = (byte)(memWord & 0xFF);
-                }
-            }
-            int dataIndex = PwJFunctions.clearAndDownload(uIdDownloadBuffer, 0);
-            while (dataIndex < downloadIndex)
-            {
-                dataIndex = PwJFunctions.downloadData(uIdDownloadBuffer, dataIndex, downloadIndex);
-            }
-            PwJFunctions.runScript(device.getUserIdWrScriptLen(), device.getUserIdWrScript());
-            PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
-        }
-        
-        // CONFIGS 
-        if (configWords > 0 && !configInProgramSpace)
-        {
-            if (device.getFamilyName().equals("PIC18F") || device.getFamilyName().equals("PIC18F_K_"))
-            {
-                if (configWords > 5)
-                {
-                    if ((configBuffer[5] & ~0x2000) == configBuffer[5])
-                    {
-                        int saveConfig6 = configBuffer[5];
-                        configBuffer[5] = 0xFFFF;
-                        PwJFunctions.writeConfigOutsideProgMem(device, false, false);
-                        configBuffer[5] = saveConfig6;
+                        configBackUps[config - 1] = progMemBuffer[endOfBuffer - config];
+                        progMemBuffer[endOfBuffer - config] = device.getBlankValue();
                     }
                 }
-            }
-            PwJFunctions.writeConfigOutsideProgMem(device, false, false);
-        }
-        else if (configWords > 0 && configInProgramSpace)
-        {
-            PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
-            int lastBlock = progMemBuffer.length - device.getProgMemWrWords();
-            if (device.getProgMemWrPrepScript() != 0)
-            {
-                PwJFunctions.downloadAddress(lastBlock * device.getAddressIncrement());
-                PwJFunctions.runScript(device.getProgMemWrPrepScriptLen(), device.getProgMemWrPrepScript());
-            }
-            byte[] downBuff = new byte[256];
-            int downIndex = 0;
-            for (int word = 0; word > device.getProgMemWrWords(); word++)
-            {
-                int memWord = progMemBuffer[lastBlock++];
-                if (activeFamily == 11) memWord <<= 1;
-                downBuff[downIndex++] = (byte) memWord;
-                for (int bt = 1; bt < device.getBytesPerLocation(); bt++)
+                endOfBuffer--;
+
+                // Write program memory
+                PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript()); // Enter programming mode
+                if (device.getProgMemWrPrepScript()!= 0)
                 {
-                    memWord >>= 8;
-                    downBuff[downIndex++] = (byte) memWord;
+                    PwJFunctions.downloadAddress(0);
+                    PwJFunctions.runScript(device.getProgMemWrPrepScriptLen(), device.getProgMemWrPrepScript());
                 }
+
+                // How many words are written in a single write operation 
+                int wordsPerWrite = device.getProgMemWrWords(); 
+                // How many bytes in a word
+                int bytesPerWord = device.getBytesPerLocation();
+                // How many executions of PROG_MEM_WR to use the download buffer
+                int scriptRunsToUseDownload = 256 / (bytesPerWord * wordsPerWrite); // 256 is the download buffer size
+                // Number of words to be written in each iteration of the FOR loop
+                int wordsPerLoop = scriptRunsToUseDownload * wordsPerWrite;
+                // Counter of number of words that have been downloaded
+                int wordsWritten = 0;
+                // Index of the last non blank value in program memory
+                endOfBuffer = PwJFunctions.findLastUsedInBuffer(progMemBuffer, device.getBlankValue(), endOfBuffer);
+
+
+                if (((wordsPerWrite == (endOfBuffer + 1)) || (wordsPerLoop > (endOfBuffer + 1))))
+                { 
+                    scriptRunsToUseDownload = 1;
+                    wordsPerLoop = wordsPerWrite;
+                }
+                // Loop iterations to download entire program memory buffer
+                int writes = (endOfBuffer + 1) / wordsPerLoop;
+                if (((endOfBuffer + 1) % wordsPerLoop) > 0)  writes++;
+                // Number of words to be written 
+                endOfBuffer = writes * wordsPerLoop;
+
+
+                byte[] downloadBuffer = new byte[256];
+                do
+                {
+                    int downloadIndex = 0;
+                    for (int word = 0; word < wordsPerLoop; word++)
+                    {
+                        if (wordsWritten == endOfBuffer)
+                        {
+                            break;
+                        }                   
+                        int memWord = progMemBuffer[wordsWritten++];
+                        if (activeFamily == 11)
+                        {
+                            memWord = memWord << 1;
+                        }
+                        downloadBuffer[downloadIndex++] = (byte) memWord;  // Copy the first byte of prog mem to downloadBuffer
+
+                        for (int bt = 1; bt < bytesPerWord; bt++)   // Copy the rest of the bytes
+                        {
+                            memWord >>= 8;
+                            downloadBuffer[downloadIndex++] = (byte) memWord;
+                        }
+                    }
+                    // Download the data
+                    int dataIndex = PwJFunctions.clearAndDownload(downloadBuffer, 0);
+
+                    while (dataIndex < downloadIndex)
+                    {
+                        dataIndex = PwJFunctions.downloadData(downloadBuffer, dataIndex, downloadIndex);
+                    }
+
+                    PwJFunctions.runScriptItr(device.getProgMemWrScriptLen(), device.getProgMemWrScript(), (byte) scriptRunsToUseDownload);
+
+                } while (wordsWritten < endOfBuffer);
+
+                PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+
+                int verifyStop = endOfBuffer;
+                if (configInProgramSpace)
+                {// if config in program memory, restore prog memory to proper values.
+                    for (int cfg = configWords; cfg > 0; cfg--)
+                    {
+                        progMemBuffer[device.getProgMem().length - cfg] = configBackUps[cfg - 1];
+                    }
+                }
+
+                // EEPROM
+                if (device.getEeMemSize() > 0)
+                {
+                    PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+                    if (device.getEeWrPrepScript() > 0)
+                    {
+                        PwJFunctions.downloadAddress(0);
+                        PwJFunctions.runScript(device.getEeWrPrepScriptLen(), device.getEeWrPrepScript());
+                    }
+                    int eeBytesPerWord = device.getEeMemBytesPerWord();
+                    int eeBlank = 0xFF;
+                    if (device.getEeMemAddressIncrement() > 0)
+                    {
+                        eeBlank = 0xFFFF;
+                    }
+                    else if (activeFamily == 10)
+                    {
+                        eeBlank = 0xFFF;
+                    }
+                    int locationsPerLoop = device.getEeWrLocations(); 
+                    if (locationsPerLoop < 16)
+                    {
+                        locationsPerLoop = 16;
+                    }
+                    if (!rowErase)
+                    {
+                        endOfBuffer = PwJFunctions.findLastUsedInBuffer(eeMemBuffer, eeBlank, eeMemBuffer.length - 1);
+                    }
+
+                    int eeWrites = (endOfBuffer + 1) / locationsPerLoop;
+                    if (((endOfBuffer + 1) % locationsPerLoop) > 0)
+                    {
+                        eeWrites++;
+                    }
+                    endOfBuffer = eeWrites * locationsPerLoop; 
+                    byte[] eeDownloadBuffer = new byte[(locationsPerLoop * eeBytesPerWord)];
+
+
+                    int eeScriptRunsPerLoop = locationsPerLoop / device.getEeWrLocations();
+                    int locationsWritten = 0;
+
+                    do
+                    {
+                        int downloadIndex = 0;
+                        for (int word = 0; word < locationsPerLoop; word++)
+                        {
+                            int eeWord = eeMemBuffer[locationsWritten++];
+                            if (activeFamily == 11)
+                            {
+                                eeWord = eeWord << 1;
+                            }
+
+                            eeDownloadBuffer[downloadIndex++] = (byte)(eeWord & 0xFF);
+
+                            for (int bt = 1; bt < bytesPerWord; bt++)
+                            {
+                                eeWord >>= 8;
+                                eeDownloadBuffer[downloadIndex++] = (byte)(eeWord & 0xFF);
+                            }  
+                        }
+                        PwJFunctions.clearAndDownload(eeDownloadBuffer, 0);
+
+                        PwJFunctions.runScriptItr(device.getEeWrScriptLen(), device.getEeWrScript(), (byte) eeScriptRunsPerLoop);
+
+                    } while (locationsWritten < endOfBuffer);
+                    PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+                }
+
+                // UserIDs
+                if (device.getUserIDs() > 0)
+                {
+                    PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+                    if (device.getUserIdWrPrepScript() > 0)
+                    {
+                        PwJFunctions.runScript(device.getUserIdWrPrepScriptLen(), device.getUserIdWrPrepScript());
+                    }
+                    int bytesPerID = device.getUserIdBytes();
+                    byte[] uIdDownloadBuffer = new byte[device.getUserIDs() * bytesPerID];
+                    int downloadIndex = 0;
+                    int idWritten = 0; 
+                    for (int word = 0; word < device.getUserIDs(); word++)
+                    {
+                        int memWord = userIdBuffer[idWritten++];
+                        if (activeFamily == 11)
+                        {
+                            memWord = memWord << 1;
+                        }
+
+                        uIdDownloadBuffer[downloadIndex++] = (byte)(memWord & 0xFF);
+
+                        for (int bt = 1; bt < bytesPerID; bt++)
+                        {
+                            memWord >>= 8;
+                            uIdDownloadBuffer[downloadIndex++] = (byte)(memWord & 0xFF);
+                        }
+                    }
+                    int dataIndex = PwJFunctions.clearAndDownload(uIdDownloadBuffer, 0);
+                    while (dataIndex < downloadIndex)
+                    {
+                        dataIndex = PwJFunctions.downloadData(uIdDownloadBuffer, dataIndex, downloadIndex);
+                    }
+                    PwJFunctions.runScript(device.getUserIdWrScriptLen(), device.getUserIdWrScript());
+                    PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+                }
+
+                // CONFIGS 
+                if (configWords > 0 && !configInProgramSpace)
+                {
+                    if (device.getFamilyName().equals("PIC18F") || device.getFamilyName().equals("PIC18F_K_"))
+                    {
+                        if (configWords > 5)
+                        {
+                            if ((configBuffer[5] & ~0x2000) == configBuffer[5])
+                            {
+                                int saveConfig6 = configBuffer[5];
+                                configBuffer[5] = 0xFFFF;
+                                PwJFunctions.writeConfigOutsideProgMem(device, false, false);
+                                configBuffer[5] = saveConfig6;
+                            }
+                        }
+                    }
+                    PwJFunctions.writeConfigOutsideProgMem(device, false, false);
+                }
+                else if (configWords > 0 && configInProgramSpace)
+                {
+                    PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+                    int lastBlock = progMemBuffer.length - device.getProgMemWrWords();
+                    if (device.getProgMemWrPrepScript() != 0)
+                    {
+                        PwJFunctions.downloadAddress(lastBlock * device.getAddressIncrement());
+                        PwJFunctions.runScript(device.getProgMemWrPrepScriptLen(), device.getProgMemWrPrepScript());
+                    }
+                    byte[] downBuff = new byte[256];
+                    int downIndex = 0;
+                    for (int word = 0; word > device.getProgMemWrWords(); word++)
+                    {
+                        int memWord = progMemBuffer[lastBlock++];
+                        if (activeFamily == 11) memWord <<= 1;
+                        downBuff[downIndex++] = (byte) memWord;
+                        for (int bt = 1; bt < device.getBytesPerLocation(); bt++)
+                        {
+                            memWord >>= 8;
+                            downBuff[downIndex++] = (byte) memWord;
+                        }
+                    }
+                    int dataIdx = PwJFunctions.clearAndDownload(downBuff, 0);
+                    while (dataIdx < downIndex)
+                    {
+                        dataIdx = PwJFunctions.downloadData(downBuff, dataIdx, downIndex);
+                    }
+                    PwJFunctions.runScript(device.getProgMemWrScriptLen(), device.getProgMemWrScript());
+                    PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+                }
+                return writeState.SUCCEED;
             }
-            int dataIdx = PwJFunctions.clearAndDownload(downBuff, 0);
-            while (dataIdx < downIndex)
+        };
+        
+        write.setOnSucceeded((WorkerStateEvent event1) -> {
+            if (write.getValue() == writeState.SUCCEED)
             {
-                dataIdx = PwJFunctions.downloadData(downBuff, dataIdx, downIndex);
+                Prompt.closeWait();
+                Prompt.alert("Programming Done", rootPane, rootAnchorPane);
             }
-            PwJFunctions.runScript(device.getProgMemWrScriptLen(), device.getProgMemWrScript());
-            PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
-        }
-        System.out.println("Programming done");
+        });
+        
+        write.setOnFailed((WorkerStateEvent event1) -> {
+            Prompt.closeWait();
+            Prompt.alert("Programming failed", rootPane, rootAnchorPane);
+        });
+        
+        Thread th = new Thread(write); 
+        th.setDaemon(false);
+        th.start();
     }
     
     @FXML
     private void erasePIC(ActionEvent event) {
-        
-        byte[] cmd = {0x30, 00, 1,2,3,4,5,6,7,8, 9,9, 88, 65, 0x28, 0x3F, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        PwJFunctions.clearAndDownload(cmd, 0);
-        
-        
-        byte[] progMemWrCmd = new byte[6];
-        progMemWrCmd[0] = CLEAR_UP_BUFF;
-        progMemWrCmd[1] = RUN_ROM_SCRIIPT_ITR;
-        progMemWrCmd[2] = 29;
-        progMemWrCmd[3] = (byte) 0x60;   
-        progMemWrCmd[4] = (byte) 0x62; 
-        progMemWrCmd[5] = (byte) 1;
-        USBFunctions.hidWrite(progMemWrCmd);
-        
-        /*
+        Prompt.wait("Erasing", rootPane, rootAnchorPane);
         boolean rowErase = false;
-        // Check if device used low voltage row erase
+        // Check if device uses row erase
         if (deviceFound && device.getRowEraseSize() > 0)
         {
             rowErase = true;
         }
         eraseDevice(rowErase);
-        */
+        Prompt.closeWait();
     }
     
     public boolean eraseDevice (boolean rowErase)
@@ -971,5 +1074,252 @@ public class PGMMainController implements Initializable, IDefinitions {
             }
         }
         return true;
+    }
+    
+    @FXML
+    private void readPIC(ActionEvent event) 
+    {
+        // Check if programmer and device are connected
+        if (!interfaceCheck())  return;
+        
+        byte[] script = {MCLR_TGT_GND_ON, VDD_ON};
+        PwJFunctions.sendScript(script);
+        
+        int[] progMembuffer = device.getProgMem();
+        int[] eeMemBufer = device.getEepromMem();
+        int[] userIdBuffer = device.getUserID();
+        int[] configBuffer = device.getConfig();
+        
+        if (device.getProgMemSize() > 0)
+        {
+            byte[] uploadBuffer = new byte[128];
+
+            PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript()); // Enter programming mode
+
+            if (device.getProgMemAddrSetScript() != 0 && device.getProgMemAddrBytes() > 0)
+            {
+                PwJFunctions.downloadAddress(0);
+                PwJFunctions.runScript(device.getProgMemAddrSetScriptLen(), device.getProgMemAddrSetScript());
+            }
+
+            int bytesPerWord = device.getBytesPerLocation();
+            int scriptRunsToFillUpload = 128 / (device.getProgMemRdWords() * bytesPerWord); 
+            int wordsPerLoop = scriptRunsToFillUpload * device.getProgMemRdWords();
+            int wordsRead = 0;
+
+            do 
+            {
+                PwJFunctions.runScriptItr(device.getProgMemRdScriptLen(), device.getProgMemRdScript(), (byte) scriptRunsToFillUpload);
+
+                byte[] uploadedData;
+
+                for (int i = 0; i < 2; i++)
+                {
+                    uploadedData = PwJFunctions.uploadData(false);
+                    if (uploadedData == null)
+                    {
+                        Prompt.alert("Failed to read device", rootPane, rootAnchorPane);
+                        return;
+                    }
+                    System.arraycopy(uploadedData, 0, uploadBuffer, (i*64), 64); // System.arraycopy(source, sourceIndex, destination, destinationIndex, # of bytes)
+                }
+
+                int uploadIndex = 0;
+                for (int word = 0; word < wordsPerLoop; word++)
+                {
+                    int bt = 0;
+                    int memWord = uploadBuffer[uploadIndex + bt++];
+
+                    if (bt < bytesPerWord)
+                        memWord |= (uploadBuffer[uploadIndex + bt++] << 8);
+
+                    if (bt < bytesPerWord)
+                        memWord |= (uploadBuffer[uploadIndex + bt++] << 16);
+                    uploadIndex += bt;
+                    if (activeFamily == 11)
+                        memWord = (memWord >> 1) & device.getBlankValue();
+
+                    progMembuffer[wordsRead++] = memWord;
+                    if (wordsRead == device.getProgMemSize())
+                        break;
+                }
+
+            } while (wordsRead < device.getProgMemSize());
+            PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+        }
+        // EEPROM
+        if (device.getEeMemSize() != 0)
+        {
+            byte[] uploadBuffer = new byte[128];
+            PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+            
+            if (device.getEeRdPrepScript() != 0)
+            {
+                if (device.getEeMemHexBytes() == 4)
+                {
+                    PwJFunctions.downloadAddress(device.getEeMemAddr() / 4);
+                }
+                else 
+                {
+                    PwJFunctions.downloadAddress(0);
+                }
+                PwJFunctions.runScript(device.getEeRdPrepScriptLen(), device.getEeRdPrepScript());
+            }
+            int bytesPerWord = device.getEeMemBytesPerWord();
+            int scriptRunsToFillUpload = 128 / (device.getEeRdLocations() * bytesPerWord);
+            
+            int wordsPerLoop = scriptRunsToFillUpload * device.getEeRdLocations();
+            int wordsRead = 0;
+            int eeBlank = 0xFF;
+            if (device.getEeMemAddressIncrement() > 0)
+            {
+                eeBlank = 0xFFFF;
+            }
+            else if (activeFamily == 10)
+            {
+                eeBlank = 0xFFF;
+            }
+            do {
+                PwJFunctions.runScriptItr(device.getEeRdScriptLen(), device.getEeRdScript(), (byte) scriptRunsToFillUpload);
+                
+                byte[] uploadedData;
+                for (int i = 0; i < 2; i++) {
+                    uploadedData = PwJFunctions.uploadData(false);
+                    if (uploadedData == null)
+                    {
+                        Prompt.alert("Failed to read device", rootPane, rootAnchorPane);
+                        return;
+                    }
+                    System.arraycopy(uploadedData, 0, uploadBuffer, (i*64), 64); // System.arraycopy(source, sourceIndex, destination, destinationIndex, # of bytes)
+                }
+                
+                int uploadIndex = 0;
+                for (int word = 0; word < wordsPerLoop; word++) {
+                    int bt = 0;
+                    int memWord = uploadBuffer [uploadIndex + bt++];
+                    if (bt < bytesPerWord)
+                    {
+                        memWord |= uploadBuffer[uploadIndex + bt++];
+                    }
+                    uploadIndex += bt;
+                    
+                    if (activeFamily == 11)
+                    {
+                        memWord = (memWord >> 1) & eeBlank;
+                    }
+                    eeMemBufer[wordsRead++] = memWord;
+                    if (wordsRead >= device.getEeMemSize())
+                    {
+                        break;
+                    }
+                }
+            } while (wordsRead < device.getEeMemSize());
+            PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+        }
+        
+        // USERIDs
+        if (device.getUserIDs() > 0)
+        {
+            byte[] uploadBuffer = new byte[128];
+            PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+            
+            if (device.getUserIdRdPrepScript()!= 0)
+            {
+                PwJFunctions.runScript(device.getUserIdRdPrepScriptLen(), device.getUserIdRdPrepScript());
+            }
+            int bytesPerWord = device.getUserIdBytes();
+            int wordsRead = 0;
+            int uploadIndex = 0;
+            PwJFunctions.runScript(device.getUserIdRdScriptLen(), device.getUserIdRdScript());
+                
+            byte[] uploadedData;
+            uploadedData = PwJFunctions.uploadData(false);  // Upload data without including length
+            if (uploadedData == null)
+            {
+                Prompt.alert("Failed to read device", rootPane, rootAnchorPane);
+                return;
+            }
+            System.arraycopy(uploadedData, 0, uploadBuffer, 0, 64);
+            if ((device.getUserIDs() * bytesPerWord) > 64)
+            {
+                uploadedData = PwJFunctions.uploadData(false);
+                System.arraycopy(uploadedData, 0, uploadBuffer, 64, 64);
+            }
+            PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+            
+            do {
+                int bt = 0;
+                int memWord = uploadBuffer[uploadIndex + bt++];
+                if (bt < bytesPerWord)
+                {
+                    memWord |= uploadBuffer[uploadIndex + bt++] << 8;
+                }
+                if (bt < bytesPerWord)
+                {
+                    memWord |= uploadBuffer[uploadIndex + bt++] << 16;
+                }
+                uploadIndex += bt;
+                
+                if (activeFamily == 11)
+                {
+                    memWord = (memWord >> 1) & device.getBlankValue();
+                }
+                userIdBuffer[wordsRead++] = memWord;
+            } while (wordsRead < device.getUserIDs());
+        }
+        
+        // CONFIGS
+        if (device.getConfigWords() > 0)
+        {
+            int configLocation = device.getConfigAddr() / device.getProgMemHexBytes();
+            int configWords = device.getConfigWords();
+            
+            if (device.getConfigAddr() > device.getProgMemSize())
+            {   // Configs outside program memory space
+                int configIndex = 0;
+                PwJFunctions.runScript(device.getProgEntryScriptLen(), device.getProgEntryScript());
+                PwJFunctions.runScript(device.getConfigRdScriptLen(), device.getConfigRdScript());
+                PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
+                
+                byte[] uploadedData;
+                uploadedData = PwJFunctions.uploadData(false);  // Upload data without including length
+                if (uploadedData == null)
+                {
+                    Prompt.alert("Failed to read device", rootPane, rootAnchorPane);
+                    return;
+                }
+                
+                for (int word = 0; word < configWords; word++)
+                {
+                    int configWord = uploadedData[configIndex++];
+                    configWord |= (uploadedData[configIndex++] << 8);
+                    if (activeFamily == 11)
+                    {
+                        configWord = (configWord >> 1) | device.getBlankValue();
+                    }
+                    configBuffer[word] = configWord;
+                }
+            } 
+            else
+            {   // Configs inside program memory
+                for (int word = 0; word < configWords; word++)
+                {
+                    configBuffer[word] = progMembuffer[configLocation + word];
+                }
+            }
+            
+            // OSCCAL 
+            if (device.getOsccalSave())
+            {
+                PwJFunctions.readOSSCAL(configWords);
+            }
+        }
+        // TODO: Turn Vdd off
+        device.setProgMem(progMembuffer);
+        device.setEepromMem(eeMemBufer);
+        device.setUserID(userIdBuffer);
+        device.setConfig(configBuffer);
+        
+        updateMemoryUI ();
     }
 }

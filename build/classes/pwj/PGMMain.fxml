@@ -5,6 +5,7 @@
 <?import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.Cursor?>
+<?import javafx.scene.control.CheckMenuItem?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
@@ -37,6 +38,11 @@
                         <MenuItem fx:id="detectPICMenuItem" disable="true" mnemonicParsing="false" onAction="#detectPIC" text="Détecter le PIC" />
                   </items>
                 </Menu>
+                  <Menu mnemonicParsing="false" text="Paramètres">
+                     <items>
+                        <CheckMenuItem mnemonicParsing="false" selected="true" text="Vérifier après la programmation " />
+                     </items>
+                  </Menu>
               </menus>
                <cursor>
                   <Cursor fx:constant="DEFAULT" />
@@ -56,7 +62,7 @@
             </Pane>
             <JFXTabPane focusTraversable="false" layoutY="79.0" prefHeight="316.0" prefWidth="680.0" stylesheets="@ui/css/main.css">
                <tabs>
-                  <Tab text="Contrôles">
+                  <Tab fx:id="controlsTab" text="Contrôles">
                     <content>
                       <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="278.0" prefWidth="680.0">
                            <children>
@@ -231,22 +237,22 @@
                               </VBox>
                               <HBox alignment="CENTER" layoutX="33.0" layoutY="10.0" prefHeight="30.0" prefWidth="278.0" spacing="10.0">
                                  <children>
-                                    <JFXButton id="left-controle-buttons" focusTraversable="false" onAction="#writePIC" prefHeight="40.0" prefWidth="123.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Programmer">
+                                    <JFXButton id="left-controle-buttons" fx:id="writeBtn" focusTraversable="false" onAction="#writePIC" prefHeight="40.0" prefWidth="123.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Programmer">
                                        <font>
                                           <Font name="System Bold" size="14.0" />
                                        </font>
                                     </JFXButton>
-                                    <JFXButton focusTraversable="false" layoutX="158.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Lire">
+                                    <JFXButton fx:id="readBtn" focusTraversable="false" layoutX="158.0" layoutY="10.0" onAction="#readPIC" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Lire">
                                        <font>
                                           <Font name="System Bold" size="14.0" />
                                        </font>
                                     </JFXButton>
-                                    <JFXButton focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Vérifier">
+                                    <JFXButton fx:id="verifyBtn" focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Vérifier">
                                        <font>
                                           <Font name="System Bold" size="14.0" />
                                        </font>
                                     </JFXButton>
-                                    <JFXButton id="right-controle-buttons" focusTraversable="false" layoutX="84.0" layoutY="10.0" onAction="#erasePIC" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Effacer">
+                                    <JFXButton id="right-controle-buttons" fx:id="eraseBtn" focusTraversable="false" layoutX="84.0" layoutY="10.0" onAction="#erasePIC" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Effacer">
                                        <font>
                                           <Font name="System Bold" size="14.0" />
                                        </font>
@@ -260,7 +266,7 @@
                         </AnchorPane>
                     </content>
                   </Tab>
-                  <Tab text="Mémoire Programme">
+                  <Tab fx:id="progMemTab" text="Mémoire Programme">
                     <content>
                       <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
                            <children>
@@ -280,7 +286,7 @@
                            </children></AnchorPane>
                     </content>
                   </Tab>
-                  <Tab text="EEPROM">
+                  <Tab fx:id="eepromTab" text="EEPROM">
                     <content>
                       <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0">
                            <children>
