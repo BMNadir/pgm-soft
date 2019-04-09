@@ -23,7 +23,7 @@ public class PwJFunctions implements IDefinitions {
     {
         if (getVddVppVoltages ())
         {
-           if (vdd > selfPoweredDeviceThreshold)
+           if (vdd > SELF_POWERED_DEVICE_THRESHOLD)
            {
                selfPoweredDeviceFound = true;
                setVdd (vdd, 0.85f);
@@ -280,21 +280,31 @@ public class PwJFunctions implements IDefinitions {
     }
     
     @SuppressWarnings("empty-statement")
-    public static byte[] uploadData(boolean includeLength)
+    public static byte[] uploadData(boolean includeLength, boolean clearUploadBuffer)
     {
         byte[] cmd = new byte[1];
+        if (clearUploadBuffer)
+        {
+            cmd = new byte[2];
+            cmd[0] = CLEAR_UP_BUFF;
+        }
         if (includeLength)
         {
-            cmd[0] = UPLOAD;    // First byte = length of data
+            cmd[cmd.length - 1] = UPLOAD;    // First byte = length of data
         }
         else 
         {
-            cmd[0] = UPLOAD_WITHOUT_LENGTH;
+            cmd[cmd.length - 1] = UPLOAD_WITHOUT_LENGTH;
         }
         if (USBFunctions.hidWrite(cmd) > 0)
         {
             byte[] response = new byte[64];
             while (programmer.read(response, 500) < 0);
+            
+            for (int i = 0; i < 10; i++) {
+                System.out.println(Integer.toHexString(response[i]));
+            }
+            
             return response;
         }
         return null;
@@ -381,6 +391,7 @@ public class PwJFunctions implements IDefinitions {
         String familyName = "";
         
         int progEntryScript = 0; // Used for the ProgEntry script address
+        int progEntryVppScript = 0;
         int progExitScript = 0;  // Used for the ProgExit script address
         int readDevIdScript = 0; // Used for the ReadDevID script address
         int devIdMask = 0;       // Stores the deviceID mask
@@ -395,6 +406,7 @@ public class PwJFunctions implements IDefinitions {
         byte addressIncrement = 0;
         
         byte progEntryLen = 0;
+        byte progEntryVppLen = 0;
         byte progExitLen = 0;
         byte readDevIdLen = 0;
         
@@ -430,6 +442,12 @@ public class PwJFunctions implements IDefinitions {
                     progEntryLen = rs.getByte("SCRIPTLEN");
                 }
                 
+                else if (rs.getString("SCRIPTTYPE").equals("PROG_ENTRY_VPP_FIRST"))
+                {
+                    progEntryVppScript = rs.getInt("SCRIPTADDRESS");
+                    progEntryVppLen = rs.getByte("SCRIPTLEN");
+                }
+                
                 else if (rs.getString("SCRIPTTYPE").equals("PROG_EXIT"))
                 {
                     progExitScript = rs.getInt("SCRIPTADDRESS");
@@ -458,11 +476,21 @@ public class PwJFunctions implements IDefinitions {
         cmd [6] = MCLR_TGT_GND_ON;
         cmd [7] = VDD_GND_OFF;
         cmd [8] = selfPoweredDeviceFound ? VDD_OFF : VDD_ON;    // Turn on VDD only if device isn't self-powered 
-
-        cmd [9] = RUN_ROM_SCRIPT;
-        cmd [10] = progEntryLen;
-        cmd [11] = (byte) progEntryScript;
-        cmd [12] = (byte)(progEntryScript >> 8);
+        
+        if (progEntryVppScript == 0)
+        {
+            cmd [9] = RUN_ROM_SCRIPT;
+            cmd [10] = progEntryLen;
+            cmd [11] = (byte) progEntryScript;
+            cmd [12] = (byte)(progEntryScript >> 8);
+        }
+        else 
+        {
+            cmd [9] = RUN_ROM_SCRIPT;
+            cmd [10] = progEntryVppLen;
+            cmd [11] = (byte) progEntryVppScript;
+            cmd [12] = (byte)(progEntryVppScript >> 8);
+        }
         
         cmd [13] = RUN_ROM_SCRIPT;
         cmd [14] = readDevIdLen;
@@ -483,18 +511,24 @@ public class PwJFunctions implements IDefinitions {
         cmd [25] = UPLOAD;
         
         USBFunctions.hidWrite(cmd);
-        byte[] response = new byte[5];
+        byte[] response = new byte[3];
         while (programmer.read(response, 500) < 0);
         
-        long devID =  response[4] * 0x1000000 + response[3] * 0x10000 + response[2] * 0x100 + response[1];
+        int[] deviceIdArray = new int[2];
         
+        for (byte i = 0; i < 2; i++)
+        {
+            deviceIdArray[i] = (response[i+1] >= 0) ? response[i+1] : (response[i+1] + 256);
+        }
+        
+        //long devID =  response[4] * 0x1000000 + response[3] * 0x10000 + response[2] * 0x100 + response[1];
+        long devID =  deviceIdArray[1] * 0x100 + deviceIdArray[0];
         // For midrange, deviceID should be shifted to the right by one
         if (id == 11)   devID >>= 1;
         devID &= devIdMask;
         
         // If deviceID is less then the smallest DEVID, exit
         if (devID < 3616) return 0;
-        
         PGMMainController.setDeviceFound(true);
         if (devID != PGMMainController.getActiveDevice())
         {
@@ -512,8 +546,11 @@ public class PwJFunctions implements IDefinitions {
         byte configIndex = 0;
         String configQuery = "SELECT * FROM DEVICE_CONFIG WHERE DEVID="+deviceId;
         rs = DbUtil.execQuery(configQuery);
+        
         try 
         {
+            if (!rs.isBeforeFirst())
+                return false;
             while (rs.next())
             {
                 configMasks[configIndex] = rs.getInt("CONFIGMASK");

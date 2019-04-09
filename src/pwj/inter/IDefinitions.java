@@ -88,8 +88,10 @@ public interface IDefinitions {
     static final byte EE_ROW_ERASE                  = 0x1D;
     
     // Constants 
-    static final float selfPoweredDeviceThreshold   = 2.3F;
+    static final float SELF_POWERED_DEVICE_THRESHOLD   = 2.3F;
     static enum writeState {FAILED, SUCCEED};
+    static final int DOWNLOAD_BUFFER_SIZE = 256;
+    static final int UPLOAD_BUFFER_SIZE = 256; 
 }
 
 

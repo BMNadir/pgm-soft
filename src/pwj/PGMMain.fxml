@@ -40,7 +40,7 @@
                 </Menu>
                   <Menu mnemonicParsing="false" text="Paramètres">
                      <items>
-                        <CheckMenuItem mnemonicParsing="false" selected="true" text="Vérifier après la programmation " />
+                        <CheckMenuItem fx:id="verifyAfterWrite" mnemonicParsing="false" selected="true" text="Vérifier après la programmation " />
                      </items>
                   </Menu>
               </menus>
@@ -247,7 +247,7 @@
                                           <Font name="System Bold" size="14.0" />
                                        </font>
                                     </JFXButton>
-                                    <JFXButton fx:id="verifyBtn" focusTraversable="false" layoutX="10.0" layoutY="10.0" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Vérifier">
+                                    <JFXButton fx:id="verifyBtn" focusTraversable="false" layoutX="10.0" layoutY="10.0" onAction="#verifyPIC" prefHeight="40.0" prefWidth="85.0" styleClass="controle-buttons" stylesheets="@ui/css/main.css" text="Vérifier">
                                        <font>
                                           <Font name="System Bold" size="14.0" />
                                        </font>
