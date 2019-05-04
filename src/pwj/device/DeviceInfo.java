@@ -1056,7 +1056,7 @@ public class DeviceInfo {
     private void clearEeMem ()
     {
         int eeBlankVal = 0xFF;
-        if (eeMemAddressIncrement == 2)
+        if (eeMemAddressIncrement > 1)
         {
             eeBlankVal = 0xFFFF;
         }

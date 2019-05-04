@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Platform;
@@ -21,9 +22,11 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.TransferMode;
@@ -37,10 +40,12 @@ import pwj.functions.PwJFunctions;
 import pwj.usb.USBFunctions;
 import pwj.inter.IDefinitions;
 import pwj.ui.Prompt;
+import static pwj.usb.USBFunctions.programmer;
 
 public class PGMMainController implements Initializable, IDefinitions {
     
     private boolean programmerFound = false;
+    private boolean bootloaderFound = false;
     private static boolean deviceFound = false;
     private static byte activeFamily = 0;
     private static int activeDevice = 0;
@@ -48,8 +53,8 @@ public class PGMMainController implements Initializable, IDefinitions {
     
     private String hexLastPath = "";
     private File hexFile;
-    private long lastModified = 0;
     
+    ArrayList<Byte> hexFileBytes = new ArrayList<>();
     ObservableList<MemoryDumpRow> flashList  = FXCollections.observableArrayList ();
     ObservableList<MemoryDumpRow> eepromList = FXCollections.observableArrayList ();
     
@@ -139,6 +144,17 @@ public class PGMMainController implements Initializable, IDefinitions {
     private Tab eepromTab = new Tab();
     @FXML
     private CheckMenuItem verifyAfterWrite = new CheckMenuItem();
+    @FXML
+    private RadioMenuItem usbRadioItem = new RadioMenuItem();
+    @FXML
+    private ToggleGroup pgmToggle = new ToggleGroup();
+    @FXML
+    private RadioMenuItem serialRadioItem = new RadioMenuItem();
+    @FXML
+    private RadioMenuItem bootladerRadioItem = new RadioMenuItem();
+    @FXML
+    private MenuItem connectBootloaderMenuItem = new MenuItem();
+
 
     public static class MemoryDumpRow 
     {
@@ -225,6 +241,31 @@ public class PGMMainController implements Initializable, IDefinitions {
         eepromAddrCol.getStyleClass().add("address-column");    // Change background color of address column in EEPROM memory dump
         eepromTable.getStyleClass().add("noheader");            // Remove column headers from EEPROM memory dump  
     }    
+    
+    @FXML
+    private void usbProgrammer(ActionEvent event) {
+    }
+
+    @FXML
+    private void serialProgrammer(ActionEvent event) {
+    }
+
+    @FXML
+    private void bootProgrammer(ActionEvent event) 
+    {
+        // 18F Bootloader selected 
+        if (programmerFound)    
+        {
+            programmerFound = false;
+            disconnectMenuItem.fire();
+        }
+        connectMenuItem.setDisable(true);
+        resetUI ();
+        readBtn.setDisable(true);
+        verifyBtn.setDisable(true);
+        eraseBtn.setDisable(true);
+        connectBootloaderMenuItem.setDisable(false);
+    }
 
     public static void setActiveFamily(byte activeFamilyId) {
         PGMMainController.activeFamily = activeFamilyId;
@@ -260,7 +301,6 @@ public class PGMMainController implements Initializable, IDefinitions {
         if (hexFile != null)
         {
             // Get directory of last loaded hex
-            lastModified = hexFile.lastModified();
             hexLastPath = hexFile.getParent();     
             hexPath.setText(hexLastPath);
         }
@@ -281,7 +321,6 @@ public class PGMMainController implements Initializable, IDefinitions {
         byte eeMemBytes = device.getEeMemHexBytes();
         
         // Clear device buffers
-        
         if (device.getUserIdAddr() == 0)
             device.setUserIdAddr(0xFFFFFFFF);
         
@@ -293,10 +332,7 @@ public class PGMMainController implements Initializable, IDefinitions {
         for (byte cw = 0; cw < configs.length; cw++)
         {
             configs[cw] = device.getBlankValue();
-            if (configMasks[cw] == 0)
-                configMaskImplemented [cw] = true; // if mask is blank (no implemented bits) don't need it in file
-            else 
-                configMaskImplemented [cw] = false;
+            configMaskImplemented [cw] = configMasks[cw] == 0; // if mask is blank (no implemented bits) don't need it in file
         }
         
         // Source: https://stackoverflow.com/questions/5868369/how-to-read-a-large-text-file-line-by-line-using-java
@@ -305,8 +341,8 @@ public class PGMMainController implements Initializable, IDefinitions {
             String hexLine;
             while ((hexLine = hexReader.readLine()) != null) 
             {
-               // process the hexLine
-               //Line format in Intel Hex Format is  :BBAAAATTCC
+               // Process the hexLine
+               // Line format in Intel Hex Format is  :BBAAAATT[DD]CC
                if (hexLine.charAt(0) == ':' && hexLine.length() > 10)
                {    
                    int byteCount = Integer.parseInt(hexLine.substring(1, 3), 16); // BB
@@ -315,14 +351,14 @@ public class PGMMainController implements Initializable, IDefinitions {
                    
                    if (lineType == 0)    // Data
                    {
-                       if (hexLine.length() >= (11 + 2*byteCount))
+                       if (hexLine.length() >= (11 + 2 * byteCount))
                        {
                            for (int lineByte = 0; lineByte < byteCount; lineByte++)
                            {
                                int byteAddress = fileAddress + lineByte;
                                int arrayAddress = byteAddress / device.getProgMemHexBytes();
                                int bytePosition = byteAddress % device.getProgMemHexBytes();
-                               int wordByte =  0xFFFFFF00 | Integer.parseInt(hexLine.substring(9+(2*lineByte), 11+(2*lineByte)), 16);
+                               int wordByte =  0x7FFFFF00 | Integer.parseInt(hexLine.substring(9+(2 * lineByte), 11 + (2 * lineByte)), 16);
                                for (byte shift = 0; shift < bytePosition; shift++)
                                 { // Shift byte into proper position
                                     wordByte <<= 8;
@@ -334,7 +370,6 @@ public class PGMMainController implements Initializable, IDefinitions {
                                if (byteAddress >= 0 && byteAddress < progMemSizeBytes)
                                {
                                    progMemBuffer[arrayAddress] &= wordByte;
-                                   //System.out.println(Integer.toHexString(progMemBuffer[arrayAddress]));
                                    lineExceedsFlash = false;
                                }
                                
@@ -492,6 +527,86 @@ public class PGMMainController implements Initializable, IDefinitions {
         }
         return true;
     }
+    
+    private boolean importHexBootloader ()
+    {
+        boolean addressOutOfRange = true;
+        boolean invalidAddressInFile = false;
+        byte  byteCount;
+        int fileAddress;
+        byte lineType; 
+        int addressBase = 0;
+        int progMemSizeBytes = 16384 * 2;   // Prog mem size * # hex bytes
+        int eeMemAddress = 15728640;
+        byte eeMemBytes = 1;
+        
+        hexFileBytes.clear();
+        try (BufferedReader hexReader = new BufferedReader(new FileReader(hexFile))) 
+        {
+            String hexLine;
+            while ((hexLine = hexReader.readLine()) != null) 
+            {
+               // Process the hexLine
+               // Line format in Intel Hex Format is  :BBAAAATT[DD]CC
+               if (hexLine.charAt(0) == ':' && hexLine.length() > 10)
+               { 
+                   byteCount = (byte) Integer.parseInt(hexLine.substring(1, 3), 16); // BB
+                   fileAddress = addressBase + Integer.parseInt(hexLine.substring(3, 7), 16); // AAAA
+                   lineType = (byte) Integer.parseInt(hexLine.substring(7, 9), 16);    // TT
+                   
+                   if (lineType == 2 || lineType == 4)
+                   {
+                      if (hexLine.length() >= (11 + (2 * byteCount))) 
+                      {
+                          addressBase = Integer.parseInt(hexLine.substring(9,13), 16);
+                      }
+                      // For compilers that use a linear address
+                      if (lineType == 2)
+                      {
+                          addressBase <<= 4;
+                      }
+                      else
+                      {
+                          // Extended address
+                          addressBase <<= 16;
+                      }
+                   }
+                   
+                   else if (lineType == 0)    // Data
+                   {
+                       if (hexLine.length() >= (11 + 2 * byteCount))
+                       {
+                           // Add address if it's in the program or EEPROM space
+                           if (fileAddress < 0x7FFF || (fileAddress >= 0x00F00000 && fileAddress < (0x00F00000+256)))
+                           {
+                                hexFileBytes.add(byteCount);
+                                hexFileBytes.add((byte) fileAddress);
+                                hexFileBytes.add((byte) (fileAddress >> 8));
+                                hexFileBytes.add((byte) (fileAddress >> 16));
+                                hexFileBytes.add((byte) (fileAddress >> 24));
+                           }
+                           for (int lineByte = 0; lineByte < byteCount; lineByte++)
+                           {
+                               int byteAddress = fileAddress + lineByte;
+                               int eeAddress = (byteAddress - eeMemAddress) / eeMemBytes;
+                               int wordByte =  0x7FFFFF00 | Integer.parseInt(hexLine.substring(9+(2 * lineByte), 11 + (2 * lineByte)), 16);
+                               /* If byte is in program memory or in EEPROM */
+                               if ((byteAddress >= 0 && byteAddress < progMemSizeBytes) || (byteAddress >= eeMemAddress &&  eeAddress < 256))
+                               {
+                                    hexFileBytes.add((byte) wordByte);
+                               }
+                           }
+                       }
+                   }
+               }
+            }
+        } catch (IOException e) 
+        {
+            Prompt.alert("Fichier hex n'a pas pu être chargé", rootPane, rootAnchorPane);
+            return false;
+        }
+        return true;
+    }
 
     @FXML
     private void handleFileDrag(DragEvent event) {
@@ -529,6 +644,16 @@ public class PGMMainController implements Initializable, IDefinitions {
             pwjInit ();
         }
         
+    }
+    
+    @FXML
+    private void connectToBootloader(ActionEvent event) {
+        if (USBFunctions.checkForBootloader())
+        {
+            programmerStatus.setText("PIC18F bootloader connecté");
+            connectBootloaderMenuItem.setDisable(true);
+            bootloaderFound = true;
+        }
     }
 
     public void setProgrammerFound(boolean programmerFound) {
@@ -636,14 +761,14 @@ public class PGMMainController implements Initializable, IDefinitions {
             int eeIndex = 0;
             do 
             {
-                word1 = String.format("%1$02X",eeMemBuffer[eeIndex++]);
-                word2 = String.format("%1$02X",eeMemBuffer[eeIndex++]);
-                word3 = String.format("%1$02X",eeMemBuffer[eeIndex++]);
-                word4 = String.format("%1$02X",eeMemBuffer[eeIndex++]);
-                word5 = String.format("%1$02X",eeMemBuffer[eeIndex++]);
-                word6 = String.format("%1$02X",eeMemBuffer[eeIndex++]);
-                word7 = String.format("%1$02X",eeMemBuffer[eeIndex++]);
-                word8 = String.format("%1$02X",eeMemBuffer[eeIndex++]);
+                word1 = String.format("%1$02X",eeMemBuffer[eeIndex++] & 0xFF);
+                word2 = String.format("%1$02X",eeMemBuffer[eeIndex++] & 0xFF);
+                word3 = String.format("%1$02X",eeMemBuffer[eeIndex++] & 0xFF);
+                word4 = String.format("%1$02X",eeMemBuffer[eeIndex++] & 0xFF);
+                word5 = String.format("%1$02X",eeMemBuffer[eeIndex++] & 0xFF);
+                word6 = String.format("%1$02X",eeMemBuffer[eeIndex++] & 0xFF);
+                word7 = String.format("%1$02X",eeMemBuffer[eeIndex++] & 0xFF);
+                word8 = String.format("%1$02X",eeMemBuffer[eeIndex++] & 0xFF);
                 eepromList.add(new MemoryDumpRow(word1, word2, word3, word4, word5, word6, word7, word8));
             } while (eeIndex < eeMemBuffer.length);
             eepromTable.getItems().setAll(eepromList);
@@ -659,7 +784,10 @@ public class PGMMainController implements Initializable, IDefinitions {
                 Prompt.alert("Programmateur non connecté", rootPane, rootAnchorPane);
                 // Disconnect from the programmer if previously connected
                 if (programmerFound)
+                {
+                    programmerFound = false;
                     disconnectMenuItem.fire();
+                }
             });
                  
             return false;
@@ -692,8 +820,8 @@ public class PGMMainController implements Initializable, IDefinitions {
             Prompt.alert("Le fichier hex a été modifié, recharger-le ?", rootPane, rootAnchorPane);
         }
         */
-        if (!importHex())   return false;
-        
+        if (usbRadioItem.isSelected()) if (!importHex())   return false;
+        if (bootladerRadioItem.isSelected()) if (!importHexBootloader())   return false;
         
         return true;
     }
@@ -726,6 +854,40 @@ public class PGMMainController implements Initializable, IDefinitions {
     @FXML
     private void writePIC(ActionEvent event) 
     {   
+        if (bootladerRadioItem.isSelected())
+        {
+            if (bootloaderFound)
+            {
+                Prompt.wait("Programmation en cours ...", rootPane, rootAnchorPane);
+                Task<Void> bootloaderWrite = new Task<Void>()
+                {
+                    @Override
+                    protected Void call() throws Exception {
+                        writeToBootloader ();
+                        return null;
+                    }
+                };
+                bootloaderWrite.setOnSucceeded((WorkerStateEvent event1) -> {
+                    Prompt.closeWait();
+                    Prompt.alert("  Programmation réussie ", rootPane, rootAnchorPane);
+                });
+        
+                bootloaderWrite.setOnFailed((WorkerStateEvent event1) -> {
+                    Prompt.closeWait();
+                    Prompt.alert("  Programmation échouée", rootPane, rootAnchorPane);
+                });
+                
+                Thread bootWrThread = new Thread(bootloaderWrite);
+                bootWrThread.setDaemon(true);
+                bootWrThread.start();
+            }
+            else 
+            {
+                Prompt.alert("Connectez-vous d'abord au bootloader ", rootPane, rootAnchorPane);
+            }
+            return;
+        }
+        
         // Check if programmer and device are connected
         if (!interfaceCheck())  return;
 
@@ -1026,6 +1188,46 @@ public class PGMMainController implements Initializable, IDefinitions {
         th.start();
     }
     
+    @SuppressWarnings("empty-statement")
+    private void writeToBootloader() throws InterruptedException 
+    {
+        if (!hexFileCheck ()) return;
+        byte[] packetBuffer = new byte[63];
+        byte[] response = new byte[1];
+        byte[] lineBytes;
+        byte lineSize;
+        int usedBytes;
+        int byteIdx = 0;
+        int remainingBytes = hexFileBytes.size();
+        while (remainingBytes > 0)
+        {
+            usedBytes = 0;
+            // Each USB packet will contain 3 lines of hex file
+            //for (byte linesInPacket = 0; linesInPacket < 3; linesInPacket++)
+            //{
+                lineBytes = new byte[hexFileBytes.get(byteIdx) + 5]; // Bytes in one line, size = nbr of bytes + 4 bytes of address + 1 byte for byte count
+                lineSize = (byte)lineBytes.length;
+                for (byte i = 0; i < lineSize; i++) lineBytes[i] = hexFileBytes.get(byteIdx++);
+                //System.arraycopy(lineBytes, 0, packetBuffer, usedBytes, lineSize);
+                usedBytes += lineSize;
+                remainingBytes -= lineSize;
+                
+                // Don't process the full 3 lines if no bytes left
+                //if (remainingBytes == 0) break; 
+            //}
+            USBFunctions.hidWrite(lineBytes);
+            
+            //System.out.println("LINE SENT *******");
+            //for (byte bt : lineBytes)
+            //    System.out.println(Integer.toHexString(bt));
+            
+            while (programmer.read(response, 500) < 0 && response[0] != RESUME_COMM) ;
+            response[0] = 0;
+        }
+        response[0] = QUIT_BOOT;
+        USBFunctions.hidWrite(response);
+    }
+    
     @FXML
     private void erasePIC(ActionEvent event) {
         
@@ -1107,22 +1309,22 @@ public class PGMMainController implements Initializable, IDefinitions {
                         byte[] uploadedData;
 
                         
-                        uploadedData = PwJFunctions.uploadData(false, true);
+                        uploadedData = PwJFunctions.uploadData(false, false);
                         if (uploadedData == null)
                         {
                             Platform.runLater(() -> {
-                                Prompt.alert("Lecture échouée", rootPane, rootAnchorPane);
+                                Prompt.alert("  Lecture échouée", rootPane, rootAnchorPane);
                             });
                             return false;
                         }
                         System.arraycopy(uploadedData, 0, uploadBuffer, 0, 64);
-                        for (int i = 1; i < 4; i++)
+                        for (int i = 1; i < 2; i++)
                         {
                             uploadedData = PwJFunctions.uploadData(false, false);
                             if (uploadedData == null)
                             {
                                 Platform.runLater(() -> {
-                                    Prompt.alert("Lecture échouée", rootPane, rootAnchorPane);
+                                    Prompt.alert("  Lecture échouée", rootPane, rootAnchorPane);
                                 });
                                 return false;
                             }
@@ -1190,12 +1392,12 @@ public class PGMMainController implements Initializable, IDefinitions {
                         PwJFunctions.runScriptItr(device.getEeRdScriptLen(), device.getEeRdScript(), (byte) scriptRunsToFillUpload);
 
                         byte[] uploadedData;
-                        for (int i = 0; i < 4; i++) {
+                        for (int i = 0; i < 2; i++) {
                             uploadedData = PwJFunctions.uploadData(false, false);
                             if (uploadedData == null)
                             {
                                 Platform.runLater (() -> {
-                                    Prompt.alert("Lecture échouée", rootPane, rootAnchorPane);
+                                    Prompt.alert("  Lecture échouée", rootPane, rootAnchorPane);
                                 });
                                 return false;
                             }
@@ -1248,7 +1450,7 @@ public class PGMMainController implements Initializable, IDefinitions {
                     if (uploadedData == null)
                     {
                         Platform.runLater (() -> {
-                            Prompt.alert("Lecture échouée", rootPane, rootAnchorPane);
+                            Prompt.alert("  Lecture échouée", rootPane, rootAnchorPane);
                         });
                         return false;
                     }
@@ -1300,7 +1502,7 @@ public class PGMMainController implements Initializable, IDefinitions {
                         if (uploadedData == null)
                         {
                             Platform.runLater (() -> {
-                                Prompt.alert("Lecture échouée", rootPane, rootAnchorPane);
+                                Prompt.alert("  Lecture échouée", rootPane, rootAnchorPane);
                             });
                             return false;
                         }
@@ -1346,13 +1548,13 @@ public class PGMMainController implements Initializable, IDefinitions {
             Prompt.closeWait();
             if (read.getValue() == true)
             {
-                Prompt.alert("Lecture réussie ", rootPane, rootAnchorPane);
+                Prompt.alert("  Lecture réussie ", rootPane, rootAnchorPane);
             }
         });
         
         read.setOnFailed((WorkerStateEvent event1) -> {
             Prompt.closeWait();
-            Prompt.alert("Lecture échouée", rootPane, rootAnchorPane);
+            Prompt.alert("  Lecture échouée", rootPane, rootAnchorPane);
         });
         
         
@@ -1382,13 +1584,13 @@ public class PGMMainController implements Initializable, IDefinitions {
             Prompt.closeWait();
             if (verify.getValue() == true)
             {
-                Prompt.alert("Verification successful", rootPane, rootAnchorPane);
+                Prompt.alert("  Verification réussie", rootPane, rootAnchorPane);
             }
         });
         
         verify.setOnFailed((WorkerStateEvent event1) -> {
             Prompt.closeWait();
-            Prompt.alert("Programming failed", rootPane, rootAnchorPane);
+            Prompt.alert("  Verification échouée", rootPane, rootAnchorPane);
         });
         
         Thread th = new Thread(verify); 
@@ -1437,7 +1639,7 @@ public class PGMMainController implements Initializable, IDefinitions {
             if (uploadedData == null)
             {
                 Platform.runLater(() -> {
-                    Prompt.alert("La vérification a échoué 1", rootPane, rootAnchorPane);
+                    Prompt.alert("La vérification a échoué line 1553", rootPane, rootAnchorPane);
                 });
                 return false;
             }
@@ -1446,7 +1648,7 @@ public class PGMMainController implements Initializable, IDefinitions {
             if (uploadedData == null)
             {
                 Platform.runLater(() -> {
-                    Prompt.alert("La vérification a échoué 1", rootPane, rootAnchorPane);
+                    Prompt.alert("La vérification a échoué line 1542", rootPane, rootAnchorPane);
                 });
                 return false;
             }
@@ -1470,7 +1672,7 @@ public class PGMMainController implements Initializable, IDefinitions {
                 {
                     PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
                     Platform.runLater (() -> {
-                        Prompt.alert("La vérification a échoué 2", rootPane, rootAnchorPane);
+                        Prompt.alert("La vérification a échoué", rootPane, rootAnchorPane);
                     });
                     return false;
                 }
@@ -1494,7 +1696,7 @@ public class PGMMainController implements Initializable, IDefinitions {
             int eeLocationPerLoop = eeScriptRunsToFillUpload * device.getEeRdLocations();
             int eeLocationsRead = 0;
             int eeBlank = 0xFF;
-            if (device.getEeMemAddressIncrement() > 0)
+            if (device.getEeMemAddressIncrement() > 1)
             {
                 eeBlank = 0xFFFF;
             }
@@ -1511,7 +1713,7 @@ public class PGMMainController implements Initializable, IDefinitions {
                 if (uploadedData == null)
                 {
                     Platform.runLater(() -> {
-                        Prompt.alert("La vérification a échoué 3", rootPane, rootAnchorPane);
+                        Prompt.alert("La vérification a échoué", rootPane, rootAnchorPane);
                     });
                     return false;
                 }
@@ -1520,7 +1722,7 @@ public class PGMMainController implements Initializable, IDefinitions {
                 if (uploadedData == null)
                 {
                     Platform.runLater(() -> {
-                        Prompt.alert("La vérification a échoué 3", rootPane, rootAnchorPane);
+                        Prompt.alert("La vérification a échoué", rootPane, rootAnchorPane);
                     });
                     return false;
                 }
@@ -1530,12 +1732,12 @@ public class PGMMainController implements Initializable, IDefinitions {
                 {
                     int bt = 0;
                     int memWord = uploadBuffer[eeUploadIdx + bt++];
-                    if (memWord < 0)    memWord += 256;
                     if (bt < eeBytesPerLocation)
-                        memWord |= (uploadBuffer[eeUploadIdx + bt++] << 8);
+                        memWord |= (uploadBuffer[eeUploadIdx + bt++] << 8) & eeBlank;
                     eeUploadIdx += bt;
                     if (activeFamily == 11)
                         memWord = (memWord >> 1) & eeBlank;
+                    
                     if (memWord != eeMemBuffer[eeLocationsRead++])
                     {
                         PwJFunctions.runScript(device.getProgExitScriptLen(), device.getProgExitScript());
@@ -1569,7 +1771,7 @@ public class PGMMainController implements Initializable, IDefinitions {
             if (uploadedData == null)
             {
                 Platform.runLater(() -> {
-                    Prompt.alert("La vérification a échoué 4", rootPane, rootAnchorPane);
+                    Prompt.alert("La vérification a échoué", rootPane, rootAnchorPane);
                 });
                 return false;
             }
@@ -1598,7 +1800,7 @@ public class PGMMainController implements Initializable, IDefinitions {
                 if (memWord != userIdBuffer[uidWordsRead++])
                 {
                     Platform.runLater (() -> {
-                        Prompt.alert("La vérification a échoué 5", rootPane, rootAnchorPane);
+                        Prompt.alert("La vérification a échoué", rootPane, rootAnchorPane);
                     });
                     return false;
                 }

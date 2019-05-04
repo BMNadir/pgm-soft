@@ -282,28 +282,27 @@ public class PwJFunctions implements IDefinitions {
     @SuppressWarnings("empty-statement")
     public static byte[] uploadData(boolean includeLength, boolean clearUploadBuffer)
     {
+        
         byte[] cmd = new byte[1];
+        /*
         if (clearUploadBuffer)
         {
             cmd = new byte[2];
             cmd[0] = CLEAR_UP_BUFF;
         }
+        */
         if (includeLength)
         {
-            cmd[cmd.length - 1] = UPLOAD;    // First byte = length of data
+            cmd[0] = UPLOAD;    // First byte = length of data
         }
         else 
         {
-            cmd[cmd.length - 1] = UPLOAD_WITHOUT_LENGTH;
+            cmd[0] = UPLOAD_WITHOUT_LENGTH;
         }
         if (USBFunctions.hidWrite(cmd) > 0)
         {
             byte[] response = new byte[64];
             while (programmer.read(response, 500) < 0);
-            
-            for (int i = 0; i < 10; i++) {
-                System.out.println(Integer.toHexString(response[i]));
-            }
             
             return response;
         }

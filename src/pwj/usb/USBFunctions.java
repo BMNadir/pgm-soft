@@ -50,6 +50,30 @@ public class USBFunctions implements IDefinitions {
         return null;
     }
     
+    public static boolean checkForBootloader ()
+    {
+        if (programmer != null) programmer.close();
+        // Provide a list of attached devices
+        for (HidDevice hidDevice : hidServices.getAttachedHidDevices()) 
+        {
+            // Compare VID and PID of the detected device to those in the FW
+            if(hidDevice.getProductId() == 0x0013 && hidDevice.getVendorId() == 0x0012)
+            {
+                programmer = hidDevice;
+                programmer.open();
+                byte[] cmd = new byte[1];
+                cmd[0] = GET_BOOTLOADER_VERSION;
+                USBFunctions.hidWrite(cmd);
+                byte[] response = new byte[4];
+                while (programmer.read(response, 500) < 0);
+                PwJ.setUsbFound(true);
+                if (response[0] == 17)
+                    return true;
+            }
+        }
+        return false;
+    }
+    
     public static int hidWrite(byte[] cmd)
     {
         byte[] toSend = new byte[cmd.length + 2]; // 1 byte is used for the leading zero, the other is for data length

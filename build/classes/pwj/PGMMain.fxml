@@ -10,9 +10,11 @@
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.RadioMenuItem?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.effect.ColorAdjust?>
 <?import javafx.scene.effect.DropShadow?>
@@ -34,6 +36,7 @@
                 <Menu mnemonicParsing="false" text="Outils">
                   <items>
                     <MenuItem fx:id="connectMenuItem" mnemonicParsing="false" onAction="#connectToProgrammer" text="Connecter au programmateur" />
+                        <MenuItem fx:id="connectBootloaderMenuItem" disable="true" mnemonicParsing="false" onAction="#connectToBootloader" text="Connecter au bootloader" />
                         <MenuItem fx:id="disconnectMenuItem" disable="true" mnemonicParsing="false" onAction="#disconnectFromProgrammer" text="Déconnecter du programmateur" />
                         <MenuItem fx:id="detectPICMenuItem" disable="true" mnemonicParsing="false" onAction="#detectPIC" text="Détecter le PIC" />
                   </items>
@@ -42,6 +45,17 @@
                      <items>
                         <CheckMenuItem fx:id="verifyAfterWrite" mnemonicParsing="false" selected="true" text="Vérifier après la programmation " />
                      </items>
+                  </Menu>
+                  <Menu mnemonicParsing="false" text="Programmateur">
+                    <items>
+                        <RadioMenuItem fx:id="usbRadioItem" mnemonicParsing="false" onAction="#usbProgrammer" selected="true" text="USB">
+                           <toggleGroup>
+                              <ToggleGroup fx:id="pgmToggle" />
+                           </toggleGroup>
+                        </RadioMenuItem>
+                        <RadioMenuItem fx:id="serialRadioItem" mnemonicParsing="false" onAction="#serialProgrammer" text="Série" toggleGroup="$pgmToggle" />
+                        <RadioMenuItem fx:id="bootladerRadioItem" mnemonicParsing="false" onAction="#bootProgrammer" text="18F Bootloader" toggleGroup="$pgmToggle" />
+                    </items>
                   </Menu>
               </menus>
                <cursor>
