@@ -537,8 +537,6 @@ public class PGMMainController implements Initializable, IDefinitions {
         byte lineType; 
         int addressBase = 0;
         int progMemSizeBytes = 16384 * 2;   // Prog mem size * # hex bytes
-        int eeMemAddress = 15728640;
-        byte eeMemBytes = 1;
         
         hexFileBytes.clear();
         try (BufferedReader hexReader = new BufferedReader(new FileReader(hexFile))) 
@@ -576,8 +574,8 @@ public class PGMMainController implements Initializable, IDefinitions {
                    {
                        if (hexLine.length() >= (11 + 2 * byteCount))
                        {
-                           // Add address if it's in the program or EEPROM space
-                           if (fileAddress < 0x7FFF || (fileAddress >= 0x00F00000 && fileAddress < (0x00F00000+256)))
+                           // Add address if it's in the program space
+                           if (fileAddress < 0x7FFF)
                            {
                                 hexFileBytes.add(byteCount);
                                 hexFileBytes.add((byte) fileAddress);
@@ -585,13 +583,12 @@ public class PGMMainController implements Initializable, IDefinitions {
                                 hexFileBytes.add((byte) (fileAddress >> 16));
                                 hexFileBytes.add((byte) (fileAddress >> 24));
                            }
-                           for (int lineByte = 0; lineByte < byteCount; lineByte++)
+                           for (byte lineByte = 0; lineByte < byteCount; lineByte++)
                            {
                                int byteAddress = fileAddress + lineByte;
-                               int eeAddress = (byteAddress - eeMemAddress) / eeMemBytes;
                                int wordByte =  0x7FFFFF00 | Integer.parseInt(hexLine.substring(9+(2 * lineByte), 11 + (2 * lineByte)), 16);
-                               /* If byte is in program memory or in EEPROM */
-                               if ((byteAddress >= 0 && byteAddress < progMemSizeBytes) || (byteAddress >= eeMemAddress &&  eeAddress < 256))
+                               /* If byte is in program memory */
+                               if (byteAddress >= 0 && byteAddress < progMemSizeBytes)
                                {
                                     hexFileBytes.add((byte) wordByte);
                                }
@@ -1189,7 +1186,7 @@ public class PGMMainController implements Initializable, IDefinitions {
     }
     
     @SuppressWarnings("empty-statement")
-    private void writeToBootloader() throws InterruptedException 
+    private void writeToBootloader()
     {
         if (!hexFileCheck ()) return;
         byte[] packetBuffer = new byte[63];
@@ -1199,29 +1196,38 @@ public class PGMMainController implements Initializable, IDefinitions {
         int usedBytes;
         int byteIdx = 0;
         int remainingBytes = hexFileBytes.size();
+        int block_addr, line_addr;
         while (remainingBytes > 0)
         {
             usedBytes = 0;
+            block_addr = hexFileBytes.get(byteIdx +3) * 0x10000 + (hexFileBytes.get(byteIdx +2) & 0xFF) * 0x100 + (hexFileBytes.get(byteIdx +1) & 0xFF);
             // Each USB packet will contain 3 lines of hex file
-            //for (byte linesInPacket = 0; linesInPacket < 3; linesInPacket++)
-            //{
+            for (byte linesInPacket = 0; linesInPacket < 3; linesInPacket++)
+            {
                 lineBytes = new byte[hexFileBytes.get(byteIdx) + 5]; // Bytes in one line, size = nbr of bytes + 4 bytes of address + 1 byte for byte count
                 lineSize = (byte)lineBytes.length;
                 for (byte i = 0; i < lineSize; i++) lineBytes[i] = hexFileBytes.get(byteIdx++);
-                //System.arraycopy(lineBytes, 0, packetBuffer, usedBytes, lineSize);
+                
+                line_addr = lineBytes[3] * 0x10000 + (lineBytes[2] & 0xFF) * 0x100 + (lineBytes[1] & 0xFF);
+                
+                if ((line_addr & ~(31)) != block_addr)
+                {   // Only send lines that are in the same memory block
+                    byteIdx -= lineSize;
+                    break;
+                }
+                System.arraycopy(lineBytes, 0, packetBuffer, usedBytes, lineSize);
                 usedBytes += lineSize;
                 remainingBytes -= lineSize;
                 
                 // Don't process the full 3 lines if no bytes left
-                //if (remainingBytes == 0) break; 
-            //}
-            USBFunctions.hidWrite(lineBytes);
+                if (remainingBytes == 0) break; 
+            }
+            USBFunctions.hidWrite(packetBuffer);
+            System.out.println("NEW PACKET *****");
+            for (byte bt : packetBuffer)
+                System.out.println(Integer.toHexString(bt));
             
-            //System.out.println("LINE SENT *******");
-            //for (byte bt : lineBytes)
-            //    System.out.println(Integer.toHexString(bt));
-            
-            while (programmer.read(response, 500) < 0 && response[0] != RESUME_COMM) ;
+            while (programmer.read(response, 500) < 0 && response[0] != RESUME_COMM);
             response[0] = 0;
         }
         response[0] = QUIT_BOOT;
@@ -1840,7 +1846,6 @@ public class PGMMainController implements Initializable, IDefinitions {
                 }
             }
         }
-        
         return true;
     }
 }

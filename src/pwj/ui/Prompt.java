@@ -10,7 +10,6 @@ import javafx.scene.effect.BoxBlur;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.TextAlignment;
 
 public class Prompt {
     private static JFXDialog waitDialog;
@@ -19,8 +18,16 @@ public class Prompt {
     public static void alert (String msg, StackPane stackPane, AnchorPane rootAnchorPane)
     {
         BoxBlur blur = new BoxBlur(3, 3, 3);
+        
+        VBox vbox = new VBox();
+        Label text = new Label(msg);
+        text.setStyle("-fx-font-weight: bold; -fx-font-size : 10pt");
+        vbox.getChildren().addAll(text);
+        vbox.setAlignment(Pos.CENTER);
+        vbox.setSpacing(5);
+        
         JFXDialogLayout content = new JFXDialogLayout();
-        content.setHeading(new Label(msg));
+        content.setBody(vbox);
         JFXDialog dialog = new JFXDialog(stackPane, content, JFXDialog.DialogTransition.TOP);
         dialog.setMinSize(300, 150);
         dialog.setOnDialogClosed((JFXDialogEvent e) -> {rootAnchorPane.setEffect(null);});
